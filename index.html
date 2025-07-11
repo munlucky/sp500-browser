@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S&P 500 브라우저 스캐너</title>
+    
+    <!-- PWA 설정 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Viewport Meta -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+</head>
+<body>
+    <div class="app">
+        <!-- 헤더 -->
+        <header class="header">
+            <h1>📈 S&P 500 스캐너</h1>
+            <div class="controls">
+                <button id="scanBtn" class="scan-btn">🔍 스캔 시작</button>
+                <button id="notificationBtn" class="notification-btn">🔔 알림 설정</button>
+                <div class="status" id="status">준비됨</div>
+            </div>
+        </header>
+
+        <!-- 요약 대시보드 -->
+        <section class="dashboard">
+            <div class="stat-card">
+                <div class="stat-number" id="breakoutCount">0</div>
+                <div class="stat-label">실시간 돌파</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="waitingCount">0</div>
+                <div class="stat-label">돌파 대기</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalScanned">0</div>
+                <div class="stat-label">총 스캔</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="lastUpdate">Never</div>
+                <div class="stat-label">마지막 업데이트</div>
+            </div>
+        </section>
+
+        <!-- 실시간 돌파 종목 -->
+        <section class="results-section">
+            <h2>🚀 실시간 돌파 종목</h2>
+            <div id="breakoutStocks" class="stock-grid">
+                <!-- 동적 생성 -->
+            </div>
+        </section>
+
+        <!-- 돌파 대기 종목 -->
+        <section class="results-section">
+            <h2>⏰ 돌파 대기 종목</h2>
+            <div id="waitingStocks" class="stock-grid">
+                <!-- 동적 생성 -->
+            </div>
+        </section>
+
+        <!-- 설정 패널 -->
+        <section class="settings-section">
+            <h2>⚙️ 설정</h2>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label>변동성 범위:</label>
+                    <input type="range" id="volatilityRange" min="2" max="10" value="6" step="0.5">
+                    <span id="volatilityValue">2-6%</span>
+                </div>
+                <div class="setting-item">
+                    <label>최소 거래량:</label>
+                    <select id="minVolume">
+                        <option value="500000">50만주</option>
+                        <option value="1000000" selected>100만주</option>
+                        <option value="2000000">200만주</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label>자동 스캔:</label>
+                    <input type="checkbox" id="autoScan">
+                    <span>5분마다</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 오프라인 표시 -->
+        <div id="offlineIndicator" class="offline-indicator hidden">
+            📡 오프라인 모드 - 캐시된 데이터 표시 중
+        </div>
+    </div>
+
+    <!-- 스크립트 로드 -->
+    <script src="js/storage.js"></script>
+    <script src="js/calculator.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/scanner.js"></script>
+    <script src="js/app.js"></script>
+    
+    <!-- Service Worker 등록 -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('SW registered', reg))
+                .catch(err => console.log('SW registration failed', err));
+        }
+    </script>
+</body>
+</html>
