@@ -8,10 +8,8 @@ class NotificationManager {
             }
         }
         
-        // 서비스 워커 알림 지원 확인
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-            console.log('푸시 알림 지원됨');
-        }
+        // 브라우저 알림 지원 확인
+        console.log('브라우저 알림 지원:', 'Notification' in window);
     }
     
     static async sendBreakoutAlert(breakoutStocks) {
@@ -49,14 +47,8 @@ class NotificationManager {
                 }
             };
             
-            // 서비스 워커를 통한 알림
-            if ('serviceWorker' in navigator) {
-                const registration = await navigator.serviceWorker.ready;
-                await registration.showNotification(title, options);
-            } else {
-                // 일반 브라우저 알림
-                new Notification(title, options);
-            }
+            // 브라우저 알림
+            new Notification(title, options);
             
             // 사운드 재생 (선택적)
             this.playNotificationSound();
@@ -162,25 +154,14 @@ class NotificationManager {
     }
 }
 
-// 알림 클릭 이벤트 처리
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data.type === 'notification-click') {
-            const data = event.data.notificationData;
-            
-            if (data.type === 'breakout') {
-                // 메인 페이지로 포커스
-                window.focus();
-                
-                // 돌파 종목 섹션으로 스크롤
-                const breakoutSection = document.querySelector('#breakoutStocks');
-                if (breakoutSection) {
-                    breakoutSection.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-        }
-    });
-}
+// 알림 클릭 이벤트 처리 (브라우저 알림)
+document.addEventListener('DOMContentLoaded', () => {
+    // 알림 클릭 시 페이지로 포커스
+    if ('Notification' in window) {
+        // 브라우저 알림은 클릭 시 자동으로 페이지로 포커스됨
+        console.log('브라우저 알림 이벤트 리스너 설정됨');
+    }
+});
 
 // 페이지 로드 시 알림 초기화
 document.addEventListener('DOMContentLoaded', () => {

@@ -5,10 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>S&P 500 브라우저 스캐너</title>
     
-    <!-- PWA 설정 -->
-    <link rel="manifest" href="manifest.json">
+    <!-- PWA 설정 (HTTP/HTTPS에서만 동작) -->
     <meta name="theme-color" content="#2563eb">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <script>
+        // HTTP/HTTPS 환경에서만 manifest 로드
+        if (location.protocol !== 'file:') {
+            const manifestLink = document.createElement('link');
+            manifestLink.rel = 'manifest';
+            manifestLink.href = 'manifest.json';
+            document.head.appendChild(manifestLink);
+        }
+    </script>
     
     <!-- CSS -->
     <link rel="stylesheet" href="css/style.css">
@@ -95,6 +103,8 @@
         </div>
     </div>
 
+    <!-- 외부 라이브러리 제거 - 직접 데이터 로드 방식 사용 -->
+    
     <!-- 스크립트 로드 -->
     <script src="js/storage.js"></script>
     <script src="js/calculator.js"></script>
@@ -102,13 +112,5 @@
     <script src="js/scanner.js"></script>
     <script src="js/app.js"></script>
     
-    <!-- Service Worker 등록 -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('SW registered', reg))
-                .catch(err => console.log('SW registration failed', err));
-        }
-    </script>
 </body>
 </html>
