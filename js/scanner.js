@@ -4,6 +4,7 @@ class BrowserStockScanner {
         this.corsProxy = 'https://api.allorigins.win/raw?url=';
         this.isScanning = false;
         this.sp500Tickers = [];
+        this.demoMode = false; // 데모 모드 기본 활성화
     }
 
     async init() {
@@ -38,16 +39,6 @@ class BrowserStockScanner {
                     name: 'Alternative GitHub CSV',
                     url: 'https://raw.githubusercontent.com/dxjoshi/sp500_stocks/main/sp500_stocks.csv',
                     parser: this.parseAlternativeCSV.bind(this)
-                },
-                {
-                    name: 'Datahub S&P 500',
-                    url: 'https://datahub.io/core/s-and-p-500-companies/r/constituents.csv',
-                    parser: this.parseCSV.bind(this)
-                },
-                {
-                    name: 'CORS Proxy + Yahoo Finance',
-                    url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://finance.yahoo.com/quote/%5EGSPC/components/'),
-                    parser: this.parseYahooHTML.bind(this)
                 }
             ];
 
@@ -135,8 +126,7 @@ class BrowserStockScanner {
         const settings = StorageManager.getSettings();
         
         try {
-            // 순차적 처리 (하나씩 처리)
-            const totalTickers = this.sp500Tickers.length;
+            const totalTickers = Math.min(this.sp500Tickers.length, 50); // 테스트용으로 50개로 제한
             
             for (let i = 0; i < totalTickers; i++) {
                 const ticker = this.sp500Tickers[i];
@@ -151,39 +141,26 @@ class BrowserStockScanner {
                     if (stock) {
                         if (stock.isBreakout) {
                             results.breakoutStocks.push(stock);
-                            console.log(`🚀 돌파 발견: ${ticker} $${stock.currentPrice.toFixed(2)} (진입가: $${stock.entryPrice.toFixed(2)}, 목표1: $${stock.target1.toFixed(2)})`);
+                            console.log(`🚀 돌파 발견: ${ticker} $${stock.currentPrice.toFixed(2)} (진입가: $${stock.entryPrice.toFixed(2)})`);
                         } else {
                             results.waitingStocks.push(stock);
                             console.log(`⏰ 대기 중: ${ticker} $${stock.currentPrice.toFixed(2)} (진입까지: $${stock.gapToEntry.toFixed(2)})`);
                         }
-                        
-                        // 상세 로그 (디버깅용)
-                        console.debug(`📊 ${ticker} 분석결과:`, {
-                            현재가: stock.currentPrice.toFixed(2),
-                            진입가: stock.entryPrice.toFixed(2),
-                            변동률: stock.volatility.toFixed(1) + '%',
-                            거래량: stock.volume.toLocaleString(),
-                            돌파여부: stock.isBreakout ? '✅' : '❌',
-                            조건만족: stock.meetsConditions ? '✅' : '❌'
-                        });
                     } else {
                         results.errors++;
-                        console.warn(`❌ ${ticker} 분석 실패: 조건 불만족`);
                     }
                 } catch (error) {
                     results.errors++;
                     console.error(`❌ ${ticker} 분석 실패:`, error.message);
                 }
                 
-                // 실시간 업데이트 (10개마다 또는 새로운 돌파 종목 발견 시)
-                if ((i + 1) % 10 === 0 || (stock && stock.isBreakout)) {
+                // 실시간 업데이트 (5개마다)
+                if ((i + 1) % 5 === 0 || (stock && stock.isBreakout)) {
                     this.updateDashboard(results);
                 }
                 
-                // API 제한 방지를 위한 딜레이 (데모 모드가 아닐 때만)
-                if (this.apiKey !== 'demo') {
-                    await this.delay(200); // 200ms 딜레이
-                }
+                // 딜레이 (API 제한 방지)
+                await this.delay(this.demoMode ? 50 : 200);
             }
             
             // 결과 정렬
@@ -191,8 +168,8 @@ class BrowserStockScanner {
             results.breakoutStocks.sort((a, b) => b.score - a.score);
             
             // 상위 결과만 유지
-            results.waitingStocks = results.waitingStocks.slice(0, 10);
-            results.breakoutStocks = results.breakoutStocks.slice(0, 5);
+            results.waitingStocks = results.waitingStocks.slice(0, 15);
+            results.breakoutStocks = results.breakoutStocks.slice(0, 10);
             
             // 로컬 스토리지에 저장
             StorageManager.saveResults(results);
@@ -205,7 +182,7 @@ class BrowserStockScanner {
                 NotificationManager.sendBreakoutAlert(results.breakoutStocks);
             }
             
-            this.updateStatus(`완료: ${results.totalScanned}개 스캔`, 'completed');
+            this.updateStatus(`완료: ${results.totalScanned}개 스캔 (돌파: ${results.breakoutStocks.length}, 대기: ${results.waitingStocks.length})`, 'completed');
             
         } catch (error) {
             console.error('스캔 중 오류:', error);
@@ -217,27 +194,35 @@ class BrowserStockScanner {
 
     async analyzeStock(ticker, settings) {
         try {
-            // Yahoo Finance API 대신 Alpha Vantage 사용 (CORS 지원)
-            const data = await this.fetchStockData(ticker);
+            let stockData;
             
-            if (!data || !data.timeSeries) {
-                return null;
+            if (this.demoMode) {
+                // 데모 모드: 모의 데이터 생성
+                stockData = this.generateDemoData(ticker);
+            } else {
+                // 실제 API 모드
+                const apiData = await this.fetchStockData(ticker);
+                if (!apiData || !apiData.timeSeries) {
+                    return null;
+                }
+                
+                const dates = Object.keys(apiData.timeSeries).sort().reverse();
+                if (dates.length < 2) return null;
+                
+                const today = apiData.timeSeries[dates[0]];
+                const yesterday = apiData.timeSeries[dates[1]];
+                
+                stockData = {
+                    currentPrice: parseFloat(today['4. close']),
+                    yesterdayClose: parseFloat(yesterday['4. close']),
+                    yesterdayHigh: parseFloat(yesterday['2. high']),
+                    yesterdayLow: parseFloat(yesterday['3. low']),
+                    volume: parseInt(yesterday['5. volume'])
+                };
             }
             
-            const dates = Object.keys(data.timeSeries).sort().reverse();
-            if (dates.length < 2) return null;
-            
-            const today = data.timeSeries[dates[0]];
-            const yesterday = data.timeSeries[dates[1]];
-            
             // 변동성 돌파 계산
-            const calculation = VolatilityCalculator.calculate({
-                currentPrice: parseFloat(today['4. close']),
-                yesterdayClose: parseFloat(yesterday['4. close']),
-                yesterdayHigh: parseFloat(yesterday['2. high']),
-                yesterdayLow: parseFloat(yesterday['3. low']),
-                volume: parseInt(yesterday['5. volume'])
-            }, settings);
+            const calculation = VolatilityCalculator.calculate(stockData, settings);
             
             if (!calculation.meetsConditions) {
                 return null;
@@ -255,9 +240,52 @@ class BrowserStockScanner {
         }
     }
 
+    generateDemoData(ticker) {
+        // 시드값을 위한 간단한 해시 함수
+        const hash = ticker.split('').reduce((a, b) => {
+            a = ((a << 5) - a) + b.charCodeAt(0);
+            return a & a;
+        }, 0);
+        
+        const random = (seed) => {
+            const x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        };
+        
+        const basePrice = 30 + (random(hash) * 200); // $30-$230
+        const volatility = 0.015 + (random(hash + 1) * 0.065); // 1.5-8%
+        const volume = 800000 + (random(hash + 2) * 4000000); // 80만-480만주
+        
+        const yesterdayClose = basePrice;
+        const dailyRange = yesterdayClose * volatility;
+        const yesterdayLow = yesterdayClose - (dailyRange * 0.4);
+        const yesterdayHigh = yesterdayLow + dailyRange;
+        
+        // 현재가는 랜덤하게 설정 (일부는 돌파, 일부는 대기)
+        const breakoutChance = random(hash + 3);
+        const entryPrice = yesterdayClose + (dailyRange * 0.6);
+        
+        let currentPrice;
+        if (breakoutChance < 0.15) {
+            // 15% 확률로 돌파
+            currentPrice = entryPrice + (random(hash + 4) * dailyRange * 0.4);
+        } else {
+            // 85% 확률로 대기
+            currentPrice = yesterdayClose + (random(hash + 5) * dailyRange * 0.5);
+        }
+        
+        return {
+            currentPrice,
+            yesterdayClose,
+            yesterdayHigh,
+            yesterdayLow,
+            volume: Math.floor(volume)
+        };
+    }
+
     async fetchStockData(ticker) {
-        // 실제 Alpha Vantage API 키가 있을 때 API 호출
-        if (this.apiKey !== 'demo') {
+        // 실제 Alpha Vantage API 키가 있을 때만 API 호출
+        if (this.apiKey && this.apiKey !== 'demo' && this.apiKey !== 'VVTMQ91XVOYZSYFR') {
             try {
                 console.log(`📡 ${ticker} Alpha Vantage API 데이터 가져오는 중...`);
                 const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&apikey=${this.apiKey}`;
@@ -265,38 +293,24 @@ class BrowserStockScanner {
                 
                 if (response.ok) {
                     const data = await response.json();
-                    const parsedData = await this.parseAlphaVantageData(data);
                     
-                    if (parsedData && parsedData.timeSeries) {
-                        console.log(`✅ ${ticker} 실제 API 데이터 로드 성공`);
-                        return parsedData;
-                    } else {
-                        console.warn(`⚠️ ${ticker} API 응답이 유효하지 않음, 모의 데이터 사용`);
+                    if (data['Error Message'] || data['Note']) {
+                        throw new Error('API 제한 또는 오류');
                     }
+                    
+                    return {
+                        timeSeries: data['Time Series (Daily)']
+                    };
                 } else {
-                    console.warn(`⚠️ ${ticker} API 응답 오류 (${response.status}), 모의 데이터 사용`);
+                    throw new Error(`HTTP ${response.status}`);
                 }
             } catch (apiError) {
                 console.warn(`❌ ${ticker} Alpha Vantage API 실패:`, apiError);
             }
         }
+        
+        return null;
     }
-
-    // API 데이터 파싱 메서드들
-    async parseAlphaVantageData(data) {
-        try {
-            if (data['Error Message'] || data['Note']) {
-                throw new Error('API 제한 또는 오류');
-            }
-            
-            return {
-                timeSeries: data['Time Series (Daily)']
-            };
-        } catch (error) {
-            return null;
-        }
-    }
-
 
     displayResults(results) {
         // 대시보드 업데이트
@@ -344,6 +358,8 @@ class BrowserStockScanner {
                 ? `<div class="gap">돌파까지: $${stock.gapToEntry.toFixed(2)}</div>`
                 : '<div class="breakout-badge">돌파!</div>';
             
+            const riskReward = stock.riskRewardRatio ? ` (R:R ${stock.riskRewardRatio.toFixed(1)}:1)` : '';
+            
             card.innerHTML = `
                 <div class="stock-header">
                     <h3>${stock.ticker}</h3>
@@ -351,7 +367,7 @@ class BrowserStockScanner {
                 </div>
                 <div class="price-info">
                     <div class="current-price">$${stock.currentPrice.toFixed(2)}</div>
-                    <div class="entry-price">진입: $${stock.entryPrice.toFixed(2)}</div>
+                    <div class="entry-price">진입: $${stock.entryPrice.toFixed(2)}${riskReward}</div>
                 </div>
                 <div class="targets">
                     <div class="target stop-loss">손절: $${stock.stopLoss.toFixed(2)}</div>
@@ -361,6 +377,7 @@ class BrowserStockScanner {
                 <div class="stats">
                     <span>변동률: ${stock.volatility.toFixed(1)}%</span>
                     <span>거래량: ${this.formatNumber(stock.volume)}</span>
+                    <span>점수: ${stock.score || 0}/100</span>
                 </div>
             `;
             
@@ -385,8 +402,19 @@ class BrowserStockScanner {
 
     updateStatus(message, type = 'default') {
         const statusEl = document.getElementById('status');
+        const scanBtn = document.getElementById('scanBtn');
+        
         statusEl.textContent = message;
         statusEl.className = `status status-${type}`;
+        
+        // 스캔 버튼 상태 업데이트
+        if (type === 'scanning') {
+            scanBtn.disabled = true;
+            scanBtn.textContent = '🔄 스캔 중...';
+        } else {
+            scanBtn.disabled = false;
+            scanBtn.textContent = '🔍 스캔 시작';
+        }
     }
 
     bindEvents() {
@@ -421,21 +449,15 @@ class BrowserStockScanner {
                 this.scanStocks();
             }
         }, 5 * 60 * 1000); // 5분마다
+        console.log('✅ 자동 스캔 시작됨 (5분 간격)');
     }
 
     stopAutoScan() {
         if (this.autoScanInterval) {
             clearInterval(this.autoScanInterval);
             this.autoScanInterval = null;
+            console.log('⏹️ 자동 스캔 중지됨');
         }
-    }
-
-    chunkArray(array, size) {
-        const chunks = [];
-        for (let i = 0; i < array.length; i += size) {
-            chunks.push(array.slice(i, i + size));
-        }
-        return chunks;
     }
 
     delay(ms) {
@@ -443,14 +465,11 @@ class BrowserStockScanner {
     }
 
     // 데이터 파싱 메서드들
-
-    // Wikipedia JSON API 파싱
     parseWikipediaJSON(jsonText) {
         try {
             const data = JSON.parse(jsonText);
             const tickers = [];
             
-            // Wikipedia mobile API 응답에서 테이블 데이터 추출
             if (data.sections) {
                 for (const section of data.sections) {
                     if (section.text && section.text.includes('ticker')) {
@@ -475,18 +494,16 @@ class BrowserStockScanner {
         }
     }
 
-    // CSV 파싱 (표준)
     parseCSV(csvText) {
         try {
             const lines = csvText.split('\n');
             const tickers = [];
             
-            // CSV 파싱 (첫 번째 줄은 헤더 - Symbol,Security,GICS Sector,...)
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (line) {
                     const ticker = line.split(',')[0].trim().replace(/"/g, '');
-                    if (ticker && ticker.length <= 5 && ticker.match(/^[A-Z]+$/)) {
+                    if (ticker && ticker.length <= 5 && ticker.match(/^[A-Z.]+$/)) {
                         tickers.push(ticker);
                     }
                 }
@@ -500,13 +517,11 @@ class BrowserStockScanner {
         }
     }
 
-    // Alternative CSV 파싱
     parseAlternativeCSV(csvText) {
         try {
             const lines = csvText.split('\n');
             const tickers = [];
             
-            // 헤더에서 Symbol 컬럼 찾기
             const headers = lines[0].toLowerCase().split(',');
             const symbolIndex = headers.findIndex(h => 
                 h.includes('symbol') || h.includes('ticker') || h.includes('stock')
@@ -519,7 +534,7 @@ class BrowserStockScanner {
                         const columns = line.split(',');
                         if (columns.length > symbolIndex) {
                             const ticker = columns[symbolIndex].trim().replace(/"/g, '');
-                            if (ticker && ticker.length <= 5 && ticker.match(/^[A-Z]+$/)) {
+                            if (ticker && ticker.length <= 5 && ticker.match(/^[A-Z.]+$/)) {
                                 tickers.push(ticker);
                             }
                         }
@@ -534,46 +549,13 @@ class BrowserStockScanner {
             return [];
         }
     }
-
-    // Yahoo Finance HTML 파싱
-    parseYahooHTML(htmlText) {
-        try {
-            const tickers = [];
-            
-            // Yahoo Finance에서 ticker 패턴 찾기
-            const tickerRegex = /data-symbol="([A-Z]{1,5})"/g;
-            let match;
-            
-            while ((match = tickerRegex.exec(htmlText)) !== null) {
-                const ticker = match[1];
-                if (ticker && ticker.length <= 5 && !tickers.includes(ticker)) {
-                    tickers.push(ticker);
-                }
-            }
-            
-            // 추가 패턴으로 더 많은 ticker 찾기
-            const altRegex = /symbol:\s*"([A-Z]{1,5})"/g;
-            while ((match = altRegex.exec(htmlText)) !== null) {
-                const ticker = match[1];
-                if (ticker && ticker.length <= 5 && !tickers.includes(ticker)) {
-                    tickers.push(ticker);
-                }
-            }
-            
-            console.log(`Yahoo Finance HTML에서 ${tickers.length}개 종목 파싱됨`);
-            return tickers;
-        } catch (error) {
-            console.warn('Yahoo Finance HTML 파싱 실패:', error);
-            return [];
-        }
-    }
 }
 
 // 전역 스캐너 인스턴스
 let stockScanner;
 
-// 페이지 로드 시 초기화
-document.addEventListener('DOMContentLoaded', async () => {
+// 페이지 로드 시 초기화 (app.js에서 호출될 예정)
+const initScanner = async () => {
     stockScanner = new BrowserStockScanner();
     await stockScanner.init();
     
@@ -582,4 +564,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (cachedResults) {
         stockScanner.displayResults(cachedResults);
     }
-});
+    
+    return stockScanner;
+};

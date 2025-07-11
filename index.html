@@ -7,7 +7,23 @@
     
     <!-- PWA 설정 (HTTP/HTTPS에서만 동작) -->
     <meta name="theme-color" content="#2563eb">
+    <meta name="description" content="실시간 S&P 500 변동성 돌파 종목 추천 서비스">
+    <meta name="keywords" content="S&P 500, 주식, 스캐너, 변동성, 돌파, 투자">
+    <meta name="author" content="S&P 500 Scanner">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="S&P 500 브라우저 스캐너">
+    <meta property="og:description" content="실시간 S&P 500 변동성 돌파 종목 추천 서비스">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="">
+    <meta property="og:image" content="icons/icon-512.png">
+    
+    <!-- 아이콘 -->
     <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+    
+    <!-- 동적 manifest 로드 -->
     <script>
         // HTTP/HTTPS 환경에서만 manifest 로드
         if (location.protocol !== 'file:') {
@@ -21,8 +37,15 @@
     <!-- CSS -->
     <link rel="stylesheet" href="css/style.css">
     
-    <!-- Viewport Meta -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://www.alphavantage.co">
+    <link rel="preconnect" href="https://finance.yahoo.com">
+    
+    <!-- 추가 Viewport Meta -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
     <div class="app">
@@ -30,27 +53,27 @@
         <header class="header">
             <h1>📈 S&P 500 스캐너</h1>
             <div class="controls">
-                <button id="scanBtn" class="scan-btn">🔍 스캔 시작</button>
-                <button id="notificationBtn" class="notification-btn">🔔 알림 설정</button>
+                <button id="scanBtn" class="scan-btn" title="Ctrl+Enter로 실행 가능">🔍 스캔 시작</button>
+                <button id="notificationBtn" class="notification-btn" title="브라우저 알림 설정">🔔 알림 설정</button>
                 <div class="status" id="status">준비됨</div>
             </div>
         </header>
 
         <!-- 요약 대시보드 -->
         <section class="dashboard">
-            <div class="stat-card">
+            <div class="stat-card" title="조건을 만족하고 돌파한 종목 수">
                 <div class="stat-number" id="breakoutCount">0</div>
                 <div class="stat-label">실시간 돌파</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" title="조건을 만족하고 돌파를 기다리는 종목 수">
                 <div class="stat-number" id="waitingCount">0</div>
                 <div class="stat-label">돌파 대기</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" title="마지막 스캔에서 분석한 총 종목 수">
                 <div class="stat-number" id="totalScanned">0</div>
                 <div class="stat-label">총 스캔</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" title="마지막 스캔 완료 시간">
                 <div class="stat-number" id="lastUpdate">Never</div>
                 <div class="stat-label">마지막 업데이트</div>
             </div>
@@ -60,7 +83,7 @@
         <section class="results-section">
             <h2>🚀 실시간 돌파 종목</h2>
             <div id="breakoutStocks" class="stock-grid">
-                <!-- 동적 생성 -->
+                <div class="no-results">스캔을 시작하여 돌파 종목을 찾아보세요!</div>
             </div>
         </section>
 
@@ -68,7 +91,7 @@
         <section class="results-section">
             <h2>⏰ 돌파 대기 종목</h2>
             <div id="waitingStocks" class="stock-grid">
-                <!-- 동적 생성 -->
+                <div class="no-results">스캔을 시작하여 대기 종목을 찾아보세요!</div>
             </div>
         </section>
 
@@ -77,23 +100,49 @@
             <h2>⚙️ 설정</h2>
             <div class="settings-grid">
                 <div class="setting-item">
-                    <label>변동성 범위:</label>
-                    <input type="range" id="volatilityRange" min="2" max="10" value="6" step="0.5">
+                    <label for="volatilityRange">변동성 범위:</label>
+                    <input type="range" id="volatilityRange" min="2" max="10" value="6" step="0.5" 
+                           title="최대 변동성 한계 설정 (최소값은 항상 2%)">
                     <span id="volatilityValue">2-6%</span>
                 </div>
                 <div class="setting-item">
-                    <label>최소 거래량:</label>
-                    <select id="minVolume">
+                    <label for="minVolume">최소 거래량:</label>
+                    <select id="minVolume" title="종목 필터링을 위한 최소 거래량">
                         <option value="500000">50만주</option>
                         <option value="1000000" selected>100만주</option>
                         <option value="2000000">200만주</option>
+                        <option value="5000000">500만주</option>
                     </select>
                 </div>
                 <div class="setting-item">
-                    <label>자동 스캔:</label>
-                    <input type="checkbox" id="autoScan">
-                    <span>5분마다</span>
+                    <label for="autoScan">자동 스캔:</label>
+                    <div>
+                        <input type="checkbox" id="autoScan" title="5분마다 자동으로 스캔 실행">
+                        <span>5분마다 자동 실행</span>
+                    </div>
                 </div>
+                <div class="setting-item">
+                    <label>스캔 모드:</label>
+                    <div>
+                        <input type="checkbox" id="demoMode" checked title="데모 데이터 사용 (실제 API 키 없이 테스트)">
+                        <span>데모 모드 (테스트용)</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 도움말 섹션 -->
+        <section class="results-section">
+            <h2>💡 사용법</h2>
+            <div style="padding: 20px; line-height: 1.6;">
+                <p><strong>변동성 돌파 전략:</strong> 래리 윌리엄스의 변동성 돌파 전략을 기반으로 합니다.</p>
+                <ul style="margin: 15px 0; padding-left: 20px;">
+                    <li><strong>진입가:</strong> 전일 종가 + (전일 고가 - 전일 저가) × 0.6</li>
+                    <li><strong>손절가:</strong> 진입가의 -5% (기본값)</li>
+                    <li><strong>목표가:</strong> 리스크 대비 1.5:1, 2:1 비율</li>
+                </ul>
+                <p><strong>단축키:</strong> Ctrl+Enter (또는 Cmd+Enter)로 스캔 시작</p>
+                <p><strong>알림:</strong> 돌파 종목 발견 시 브라우저 알림</p>
             </div>
         </section>
 
@@ -103,14 +152,91 @@
         </div>
     </div>
 
-    <!-- 외부 라이브러리 제거 - 직접 데이터 로드 방식 사용 -->
-    
-    <!-- 스크립트 로드 -->
+    <!-- Loading overlay (초기화 중 표시) -->
+    <div id="loadingOverlay" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        backdrop-filter: blur(5px);
+    ">
+        <div style="text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📈</div>
+            <div style="font-size: 1.2rem; color: #2563eb;">S&P 500 스캐너 초기화 중...</div>
+        </div>
+    </div>
+
+    <!-- 스크립트 로드 순서 중요 -->
     <script src="js/storage.js"></script>
     <script src="js/calculator.js"></script>
     <script src="js/notifications.js"></script>
     <script src="js/scanner.js"></script>
     <script src="js/app.js"></script>
+    
+    <!-- 초기화 완료 후 로딩 오버레이 제거 -->
+    <script>
+        // 초기화 완료를 확인하고 로딩 오버레이 제거
+        const checkInitialization = () => {
+            if (window.sp500App && window.sp500App.isReady()) {
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) {
+                    overlay.style.opacity = '0';
+                    overlay.style.transition = 'opacity 0.5s ease';
+                    setTimeout(() => {
+                        overlay.remove();
+                    }, 500);
+                }
+            } else {
+                setTimeout(checkInitialization, 100);
+            }
+        };
+        
+        // DOM 로드 후 확인 시작
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(checkInitialization, 1000); // 1초 후부터 확인
+        });
+        
+        // 최대 10초 후 강제 제거
+        setTimeout(() => {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.remove();
+            }
+        }, 10000);
+    </script>
+
+    <!-- PWA 서비스 워커 등록 -->
+    <script>
+        // 서비스 워커 등록 (HTTPS에서만)
+        if ('serviceWorker' in navigator && location.protocol === 'https:') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+
+    <!-- Google Analytics (선택사항) -->
+    <!--
+    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'GA_MEASUREMENT_ID');
+    </script>
+    -->
     
 </body>
 </html>
