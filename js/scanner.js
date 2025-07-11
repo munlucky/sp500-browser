@@ -17,7 +17,7 @@ class BrowserStockScanner {
         try {
             // 캐시된 리스트 먼저 확인
             const cachedTickers = StorageManager.getCachedData('sp500_tickers');
-            if (cachedTickers && cachedTickers.length > 0) {
+            if (cachedTickers && cachedTickers.length > 400) {
                 this.sp500Tickers = cachedTickers;
                 console.log(`📦 캐시된 ${this.sp500Tickers.length}개 S&P 500 종목 로드됨`);
                 return;
@@ -27,7 +27,7 @@ class BrowserStockScanner {
             const freeSources = [
                 {
                     name: 'Wikipedia JSON API',
-                    url: 'https://en.wikipedia.org/api/rest_v1/page/mobile-sections/List_of_S%26P_500_companies',
+                    url: this.corsProxy + encodeURIComponent('https://en.wikipedia.org/api/rest_v1/page/mobile-sections/List_of_S%26P_500_companies'),
                     parser: this.parseWikipediaJSON.bind(this)
                 },
                 {
@@ -45,11 +45,18 @@ class BrowserStockScanner {
             for (const source of freeSources) {
                 try {
                     console.log(`📡 ${source.name}에서 S&P 500 리스트 로드 시도...`);
+                    console.log(`🔗 URL: ${source.url}`);
                     const response = await fetch(source.url);
+                    
+                    console.log(`📊 응답 상태: ${response.status} ${response.statusText}`);
                     
                     if (response.ok) {
                         const data = await response.text();
+                        console.log(`📄 데이터 길이: ${data.length} characters`);
+                        console.log(`📄 데이터 시작 부분: ${data.substring(0, 200)}...`);
+                        
                         const tickers = await source.parser(data);
+                        console.log(`🎯 파싱 결과: ${tickers ? tickers.length : 0}개 티커`);
                         
                         if (tickers && tickers.length > 400) { // S&P 500은 500개 정도이므로 400개 이상일 때만 성공으로 간주
                             this.sp500Tickers = tickers;
@@ -58,7 +65,12 @@ class BrowserStockScanner {
                             return;
                         } else if (tickers && tickers.length > 0) {
                             console.warn(`⚠️ ${source.name}에서 ${tickers.length}개만 로드됨 (부분 성공)`);
+                            console.log(`🔍 첫 10개 티커:`, tickers.slice(0, 10));
+                        } else {
+                            console.warn(`❌ ${source.name}에서 파싱 실패 또는 빈 결과`);
                         }
+                    } else {
+                        console.warn(`❌ ${source.name} HTTP 오류: ${response.status} ${response.statusText}`);
                     }
                 } catch (error) {
                     console.warn(`❌ ${source.name} 로드 실패:`, error);
@@ -126,16 +138,17 @@ class BrowserStockScanner {
         const settings = StorageManager.getSettings();
         
         try {
-            const totalTickers = Math.min(this.sp500Tickers.length, 50); // 테스트용으로 50개로 제한
+            const totalTickers = this.sp500Tickers.length; // 모든 S&P 500 종목 스캔
             
             for (let i = 0; i < totalTickers; i++) {
                 const ticker = this.sp500Tickers[i];
                 const progress = Math.round(((i + 1) / totalTickers) * 100);
+                let stock = null;
                 
                 this.updateStatus(`스캔 중... ${ticker} (${i + 1}/${totalTickers}) ${progress}%`, 'scanning');
                 
                 try {
-                    const stock = await this.analyzeStock(ticker, settings);
+                    stock = await this.analyzeStock(ticker, settings);
                     results.totalScanned++;
                     
                     if (stock) {
@@ -146,8 +159,19 @@ class BrowserStockScanner {
                             results.waitingStocks.push(stock);
                             console.log(`⏰ 대기 중: ${ticker} $${stock.currentPrice.toFixed(2)} (진입까지: $${stock.gapToEntry.toFixed(2)})`);
                         }
+
+                        // 상세 로그 (디버깅용)
+                        console.debug(`📊 ${ticker} 분석결과:`, {
+                            현재가: stock.currentPrice.toFixed(2),
+                            진입가: stock.entryPrice.toFixed(2),
+                            변동률: stock.volatility.toFixed(1) + '%',
+                            거래량: stock.volume.toLocaleString(),
+                            돌파여부: stock.isBreakout ? '✅' : '❌',
+                            조건만족: stock.meetsConditions ? '✅' : '❌'
+                        });
                     } else {
                         results.errors++;
+console.warn(`❌ ${ticker} 분석 실패: 조건 불만족`);
                     }
                 } catch (error) {
                     results.errors++;
