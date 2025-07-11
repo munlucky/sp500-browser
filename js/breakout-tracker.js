@@ -36,6 +36,23 @@ class BreakoutTracker {
       console.log('📋 래리 윌리엄스 돌파 대기 종목 선별 시작...');
       this.updateStatus('워치리스트 생성 중...', 'scanning');
       
+      // 캐시된 워치리스트 후보 먼저 확인
+      const cachedCandidates = StorageManager.getCachedWatchListCandidates();
+      if (cachedCandidates && cachedCandidates.length > 0) {
+          console.log(`📦 캐시된 워치리스트 후보 ${cachedCandidates.length}개 사용`);
+          this.updateStatus(`캐시된 워치리스트 로드됨: ${cachedCandidates.length}개 후보`, 'completed');
+          
+          // 캐시된 데이터로 워치리스트 설정
+          cachedCandidates.forEach(candidate => {
+              this.watchList.set(candidate.ticker, candidate);
+          });
+          
+          this.displayWatchList();
+          return cachedCandidates;
+      }
+      
+      // 캐시가 없거나 만료된 경우 새로 생성
+      console.log('💫 새 워치리스트 후보 생성 중...');
       const candidates = [];
       const settings = StorageManager.getSettings();
       
@@ -85,7 +102,10 @@ class BreakoutTracker {
           // 워치리스트 업데이트
           this.updateWatchList(topCandidates);
           
-          this.updateStatus(`워치리스트 생성 완료: ${topCandidates.length}개 종목`, 'completed');
+          // 캐시에 저장 (24시간 유효)
+          StorageManager.saveWatchListCandidates(topCandidates);
+          
+          this.updateStatus(`워치리스트 생성 완료: ${topCandidates.length}개 종목 (24시간 캐시됨)`, 'completed');
           
           console.log(`✅ 돌파 대기 워치리스트 생성 완료: ${topCandidates.length}개 종목`);
           return topCandidates;
@@ -312,9 +332,55 @@ class BreakoutTracker {
           return this.generateDemoYesterdayData(ticker);
       }
       
-      // 실제 API 사용 시 구현
-      // return await this.fetchRealYesterdayData(ticker);
-      return this.generateDemoYesterdayData(ticker);
+      // 실제 API 사용
+      return await this.fetchRealYesterdayData(ticker);
+  }
+
+  async fetchRealYesterdayData(ticker) {
+      try {
+          // stockScanner의 fetchStockData 메서드 활용
+          const apiData = await stockScanner.fetchStockData(ticker);
+          if (!apiData || !apiData.timeSeries) {
+              console.warn(`❌ ${ticker} API 데이터 없음`);
+              return null;
+          }
+
+          const dates = Object.keys(apiData.timeSeries).sort().reverse();
+          if (dates.length < 2) {
+              console.warn(`❌ ${ticker} 충분한 데이터 없음`);
+              return null;
+          }
+
+          // 가장 최근 거래일 데이터를 "어제" 데이터로 사용
+          const latestDate = dates[0];
+          const latestData = apiData.timeSeries[latestDate];
+          
+          console.log(`📅 ${ticker} 전일 데이터: ${latestDate}`);
+
+          // 이전 5일 데이터로 히스토리 생성
+          const priceHistory = [];
+          const volumeHistory = [];
+          
+          for (let i = 0; i < Math.min(5, dates.length); i++) {
+              const dayData = apiData.timeSeries[dates[i]];
+              priceHistory.unshift(parseFloat(dayData['4. close']));
+              volumeHistory.unshift(parseInt(dayData['5. volume']));
+          }
+
+          return {
+              ticker,
+              yesterdayClose: parseFloat(latestData['4. close']),
+              yesterdayHigh: parseFloat(latestData['2. high']),
+              yesterdayLow: parseFloat(latestData['3. low']),
+              yesterdayVolume: parseInt(latestData['5. volume']),
+              priceHistory,
+              volumeHistory
+          };
+          
+      } catch (error) {
+          console.error(`❌ ${ticker} 전일 데이터 가져오기 실패:`, error);
+          return null;
+      }
   }
 
   // 데모용 전날 데이터 생성

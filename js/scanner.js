@@ -4,7 +4,7 @@ class BrowserStockScanner {
         this.corsProxy = 'https://api.allorigins.win/raw?url=';
         this.isScanning = false;
         this.sp500Tickers = [];
-        this.demoMode = true; // 데모 모드 기본 활성화 (돌파 추적 시스템과 호환)
+        this.demoMode = false; // 실제 API 사용
     }
 
     async init() {
@@ -233,8 +233,14 @@ class BrowserStockScanner {
                 const dates = Object.keys(apiData.timeSeries).sort().reverse();
                 if (dates.length < 2) return null;
                 
-                const today = apiData.timeSeries[dates[0]];
-                const yesterday = apiData.timeSeries[dates[1]];
+                // 오늘이 2025-07-11 (금요일)이므로 가장 최근 거래일 찾기
+                const latestDate = dates[0]; // 가장 최근 날짜
+                const previousDate = dates[1]; // 그 전 거래일
+                
+                console.log(`📅 ${ticker} 데이터 날짜: 최근=${latestDate}, 이전=${previousDate}`);
+                
+                const today = apiData.timeSeries[latestDate];
+                const yesterday = apiData.timeSeries[previousDate];
                 
                 stockData = {
                     currentPrice: parseFloat(today['4. close']),
@@ -308,8 +314,8 @@ class BrowserStockScanner {
     }
 
     async fetchStockData(ticker) {
-        // 실제 Alpha Vantage API 키가 있을 때만 API 호출
-        if (this.apiKey && this.apiKey !== 'demo' && this.apiKey !== 'VVTMQ91XVOYZSYFR') {
+        // 실제 Alpha Vantage API 호출
+        if (this.apiKey && this.apiKey !== 'demo') {
             try {
                 console.log(`📡 ${ticker} Alpha Vantage API 데이터 가져오는 중...`);
                 const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&apikey=${this.apiKey}`;

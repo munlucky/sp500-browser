@@ -3,7 +3,8 @@ class StorageManager {
         RESULTS: 'sp500_results',
         SETTINGS: 'sp500_settings',
         CACHE: 'sp500_cache',
-        FAVORITES: 'sp500_favorites'
+        FAVORITES: 'sp500_favorites',
+        WATCHLIST_CANDIDATES: 'sp500_watchlist_candidates'
     };
     
     static saveResults(results) {
@@ -120,6 +121,53 @@ class StorageManager {
         }
     }
     
+    // 워치리스트 후보 캐시 관리
+    static saveWatchListCandidates(candidates) {
+        try {
+            const data = {
+                candidates,
+                timestamp: new Date().toISOString(),
+                createdAt: Date.now(),
+                expireAt: Date.now() + (24 * 60 * 60 * 1000) // 24시간
+            };
+            localStorage.setItem(this.KEYS.WATCHLIST_CANDIDATES, JSON.stringify(data));
+            console.log(`✅ 워치리스트 후보 ${candidates.length}개 캐시됨 (24시간 유효)`);
+        } catch (error) {
+            console.error('❌ 워치리스트 후보 저장 실패:', error);
+        }
+    }
+    
+    static getCachedWatchListCandidates() {
+        try {
+            const data = localStorage.getItem(this.KEYS.WATCHLIST_CANDIDATES);
+            if (!data) return null;
+            
+            const cached = JSON.parse(data);
+            
+            // 24시간 경과 확인
+            if (Date.now() > cached.expireAt) {
+                localStorage.removeItem(this.KEYS.WATCHLIST_CANDIDATES);
+                console.log('⏰ 워치리스트 후보 캐시 만료됨');
+                return null;
+            }
+            
+            console.log(`📦 캐시된 워치리스트 후보 ${cached.candidates.length}개 로드됨`);
+            return cached.candidates;
+        } catch (error) {
+            console.error('❌ 워치리스트 후보 로드 실패:', error);
+            return null;
+        }
+    }
+    
+    static clearWatchListCandidates() {
+        try {
+            localStorage.removeItem(this.KEYS.WATCHLIST_CANDIDATES);
+            console.log('✅ 워치리스트 후보 캐시 클리어됨');
+        } catch (error) {
+            console.error('❌ 워치리스트 후보 캐시 클리어 실패:', error);
+        }
+    }
+
     static getStorageUsage() {
         let total = 0;
         for (let key in localStorage) {
