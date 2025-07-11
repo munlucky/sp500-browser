@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S&P 500 브라우저 스캐너</title>
+    <title>S&P 500 실시간 돌파 스캐너</title>
     
     <!-- PWA 설정 (HTTP/HTTPS에서만 동작) -->
     <meta name="theme-color" content="#2563eb">
@@ -12,7 +12,7 @@
     <meta name="author" content="S&P 500 Scanner">
     
     <!-- Open Graph -->
-    <meta property="og:title" content="S&P 500 브라우저 스캐너">
+    <meta property="og:title" content="S&P 500 실시간 돌파 스캐너">
     <meta property="og:description" content="실시간 S&P 500 변동성 돌파 종목 추천 서비스">
     <meta property="og:type" content="website">
     <meta property="og:url" content="">
@@ -51,13 +51,69 @@
     <div class="app">
         <!-- 헤더 -->
         <header class="header">
-            <h1>📈 S&P 500 스캐너</h1>
+            <h1>📈 S&P 500 실시간 돌파 스캐너</h1>
             <div class="controls">
-                <button id="scanBtn" class="scan-btn" title="Ctrl+Enter로 실행 가능">🔍 스캔 시작</button>
+                <button id="generateWatchListBtn" class="scan-btn" title="래리 윌리엄스 전략으로 돌파 대기 종목 선별">🔍 워치리스트 생성</button>
+                <button id="trackingBtn" class="track-btn" title="실시간 돌파 추적">▶️ 추적 시작</button>
+                <button id="scanBtn" class="scan-btn" title="전체 스캔 (기존 기능)">📊 전체 스캔</button>
                 <button id="notificationBtn" class="notification-btn" title="브라우저 알림 설정">🔔 알림 설정</button>
                 <div class="status" id="status">준비됨</div>
             </div>
         </header>
+
+        <!-- 시장 상태 및 추적 현황 -->
+        <section class="tracking-section">
+            <h2>🎯 실시간 돌파 추적</h2>
+            
+            <div class="tracking-stats">
+                <div class="tracking-stat-card">
+                    <div class="tracking-stat-number" id="watchListCount">0</div>
+                    <div class="tracking-stat-label">워치리스트</div>
+                </div>
+                <div class="tracking-stat-card">
+                    <div class="tracking-stat-number" id="breakoutToday">0</div>
+                    <div class="tracking-stat-label">오늘 돌파</div>
+                </div>
+                <div class="tracking-stat-card">
+                    <div class="tracking-stat-number" id="lastCheckTime">--:--</div>
+                    <div class="tracking-stat-label">마지막 체크</div>
+                </div>
+                <div class="tracking-stat-card">
+                    <div class="tracking-stat-number" id="trackingStatus">추적 대기 중</div>
+                    <div class="tracking-stat-label">추적 상태</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 래리 윌리엄스 전략 설명 -->
+        <section class="results-section">
+            <div class="larry-williams-info">
+                <h4>📚 래리 윌리엄스 변동성 돌파 전략</h4>
+                <p><strong>핵심 원리:</strong> 횡보 후 변동성 돌파를 이용한 단기 매매 전략</p>
+                <ul>
+                    <li><strong>진입 조건:</strong> 전일 종가 + (전일 고가 - 전일 저가) × 0.6</li>
+                    <li><strong>선별 조건:</strong> 2-8% 변동성, 100만주 이상 거래량, 횡보 패턴</li>
+                    <li><strong>리스크 관리:</strong> 진입가 대비 -5% 손절, +2%/+5% 목표가</li>
+                    <li><strong>추가 필터:</strong> 거래량 증가, 저항선 근처, 상승 추세</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 돌파 대기 워치리스트 -->
+        <section class="results-section">
+            <h2>⏰ 돌파 대기 워치리스트</h2>
+            <div id="watchListContainer" class="watch-list-grid">
+                <div class="no-results">워치리스트 생성 버튼을 클릭하여 돌파 대기 종목을 찾아보세요!</div>
+            </div>
+        </section>
+
+        <!-- 오늘의 돌파 종목 -->
+        <section class="results-section">
+            <h2>🚀 오늘의 돌파 종목</h2>
+            <div id="todayBreakouts" class="stock-grid">
+                <div class="no-results">아직 돌파한 종목이 없습니다.</div>
+            </div>
+        </section>
 
         <!-- 요약 대시보드 -->
         <section class="dashboard">
@@ -81,17 +137,17 @@
 
         <!-- 실시간 돌파 종목 -->
         <section class="results-section">
-            <h2>🚀 실시간 돌파 종목</h2>
+            <h2>🚀 전체 스캔 - 실시간 돌파 종목</h2>
             <div id="breakoutStocks" class="stock-grid">
-                <div class="no-results">스캔을 시작하여 돌파 종목을 찾아보세요!</div>
+                <div class="no-results">전체 스캔을 시작하여 돌파 종목을 찾아보세요!</div>
             </div>
         </section>
 
         <!-- 돌파 대기 종목 -->
         <section class="results-section">
-            <h2>⏰ 돌파 대기 종목</h2>
+            <h2>⏰ 전체 스캔 - 돌파 대기 종목</h2>
             <div id="waitingStocks" class="stock-grid">
-                <div class="no-results">스캔을 시작하여 대기 종목을 찾아보세요!</div>
+                <div class="no-results">전체 스캔을 시작하여 대기 종목을 찾아보세요!</div>
             </div>
         </section>
 
@@ -128,6 +184,20 @@
                         <span>데모 모드 (테스트용)</span>
                     </div>
                 </div>
+                <div class="setting-item">
+                    <label for="trackingInterval">추적 주기:</label>
+                    <select id="trackingInterval">
+                        <option value="15">15초</option>
+                        <option value="30" selected>30초</option>
+                        <option value="60">1분</option>
+                        <option value="300">5분</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label for="riskAmount">리스크 금액:</label>
+                    <input type="number" id="riskAmount" value="1000" min="100" step="100">
+                    <span>$ (주문 수량 계산용)</span>
+                </div>
             </div>
         </section>
 
@@ -135,14 +205,15 @@
         <section class="results-section">
             <h2>💡 사용법</h2>
             <div style="padding: 20px; line-height: 1.6;">
-                <p><strong>변동성 돌파 전략:</strong> 래리 윌리엄스의 변동성 돌파 전략을 기반으로 합니다.</p>
-                <ul style="margin: 15px 0; padding-left: 20px;">
-                    <li><strong>진입가:</strong> 전일 종가 + (전일 고가 - 전일 저가) × 0.6</li>
-                    <li><strong>손절가:</strong> 진입가의 -5% (기본값)</li>
-                    <li><strong>목표가:</strong> 리스크 대비 1.5:1, 2:1 비율</li>
-                </ul>
-                <p><strong>단축키:</strong> Ctrl+Enter (또는 Cmd+Enter)로 스캔 시작</p>
-                <p><strong>알림:</strong> 돌파 종목 발견 시 브라우저 알림</p>
+                <p><strong>래리 윌리엄스 돌파 전략 사용법:</strong></p>
+                <ol style="margin: 15px 0; padding-left: 20px;">
+                    <li><strong>워치리스트 생성:</strong> 전날 데이터로 돌파 대기 종목 선별</li>
+                    <li><strong>실시간 추적:</strong> 장중에 미리 계산된 진입가 돌파 감지</li>
+                    <li><strong>자동 알림:</strong> 돌파 즉시 브라우저 알림 + 모의 주문</li>
+                </ol>
+                <p><strong>진입가 공식:</strong> 전일 종가 + (전일 고가 - 전일 저가) × 0.6</p>
+                <p><strong>단축키:</strong> Ctrl+Enter (또는 Cmd+Enter)로 전체 스캔 시작</p>
+                <p><strong>데모 모드:</strong> 실제 API 없이도 전체 시스템 테스트 가능</p>
             </div>
         </section>
 
@@ -177,6 +248,7 @@
     <script src="js/calculator.js"></script>
     <script src="js/notifications.js"></script>
     <script src="js/scanner.js"></script>
+    <script src="js/breakout-tracker.js"></script> <!-- 새로운 돌파 추적 시스템 -->
     <script src="js/app.js"></script>
     
     <!-- 초기화 완료 후 로딩 오버레이 제거 -->
@@ -209,6 +281,72 @@
                 overlay.remove();
             }
         }, 10000);
+    </script>
+
+    <!-- 추가 초기화 스크립트 -->
+    <script>
+        // 돌파 추적 시스템 통합 스크립트
+        document.addEventListener('DOMContentLoaded', () => {
+            // 초기화 완료 대기 후 돌파 추적 시스템 설정
+            setTimeout(() => {
+                if (typeof breakoutTracker !== 'undefined' && breakoutTracker) {
+                    console.log('✅ 돌파 추적 시스템 사용 가능');
+                    
+                    // 기본 설정 적용
+                    const demoModeCheck = document.getElementById('demoMode');
+                    if (demoModeCheck) {
+                        demoModeCheck.checked = true; // 데모 모드 기본 활성화
+                        demoModeCheck.addEventListener('change', (e) => {
+                            if (window.stockScanner) {
+                                window.stockScanner.demoMode = e.target.checked;
+                                console.log(`데모 모드: ${e.target.checked ? 'ON' : 'OFF'}`);
+                            }
+                        });
+                    }
+                } else {
+                    console.warn('⚠️ 돌파 추적 시스템을 찾을 수 없습니다.');
+                }
+            }, 2000);
+        });
+        
+        function updateMarketStatus() {
+            const now = new Date();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            const currentDay = now.getDay();
+            
+            const statusEl = document.getElementById('marketStatus');
+            const iconEl = document.getElementById('marketStatusIcon');
+            const textEl = document.getElementById('marketStatusText');
+            
+            if (!statusEl || !iconEl || !textEl) return; // 요소가 없으면 무시
+            
+            const isWeekend = currentDay === 0 || currentDay === 6;
+            const isMarketHours = currentTime >= (9 * 60 + 30) && currentTime < (16 * 60);
+            const isOpen = !isWeekend && isMarketHours;
+            
+            if (isOpen) {
+                statusEl.className = 'market-status open';
+                iconEl.textContent = '🟢';
+                textEl.textContent = '장중 (US Market Open)';
+            } else if (isWeekend) {
+                statusEl.className = 'market-status closed';
+                iconEl.textContent = '🔴';
+                textEl.textContent = '주말 휴장';
+            } else {
+                statusEl.className = 'market-status closed';
+                iconEl.textContent = '🟡';
+                textEl.textContent = '장 마감';
+            }
+        }
+        
+        // DOM 로드 후 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            // 시장 상태 업데이트 (요소가 있을 때만)
+            setTimeout(() => {
+                updateMarketStatus();
+                setInterval(updateMarketStatus, 60000); // 1분마다 업데이트
+            }, 1000);
+        });
     </script>
 
     <!-- PWA 서비스 워커 등록 -->

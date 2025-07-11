@@ -4,7 +4,7 @@ class BrowserStockScanner {
         this.corsProxy = 'https://api.allorigins.win/raw?url=';
         this.isScanning = false;
         this.sp500Tickers = [];
-        this.demoMode = false; // 데모 모드 기본 활성화
+        this.demoMode = true; // 데모 모드 기본 활성화 (돌파 추적 시스템과 호환)
     }
 
     async init() {
@@ -171,7 +171,7 @@ class BrowserStockScanner {
                         });
                     } else {
                         results.errors++;
-console.warn(`❌ ${ticker} 분석 실패: 조건 불만족`);
+                        console.warn(`❌ ${ticker} 분석 실패: 조건 불만족`);
                     }
                 } catch (error) {
                     results.errors++;
@@ -202,7 +202,7 @@ console.warn(`❌ ${ticker} 분석 실패: 조건 불만족`);
             this.displayResults(results);
             
             // 돌파 알림
-            if (results.breakoutStocks.length > 0) {
+            if (results.breakoutStocks.length > 0 && typeof NotificationManager !== 'undefined') {
                 NotificationManager.sendBreakoutAlert(results.breakoutStocks);
             }
             
@@ -349,10 +349,15 @@ console.warn(`❌ ${ticker} 분석 실패: 조건 불만족`);
 
     updateDashboard(results) {
         // 대시보드 숫자 업데이트
-        document.getElementById('breakoutCount').textContent = results.breakoutStocks.length;
-        document.getElementById('waitingCount').textContent = results.waitingStocks.length;
-        document.getElementById('totalScanned').textContent = results.totalScanned;
-        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('ko-KR');
+        const breakoutCountEl = document.getElementById('breakoutCount');
+        const waitingCountEl = document.getElementById('waitingCount');
+        const totalScannedEl = document.getElementById('totalScanned');
+        const lastUpdateEl = document.getElementById('lastUpdate');
+        
+        if (breakoutCountEl) breakoutCountEl.textContent = results.breakoutStocks.length;
+        if (waitingCountEl) waitingCountEl.textContent = results.waitingStocks.length;
+        if (totalScannedEl) totalScannedEl.textContent = results.totalScanned;
+        if (lastUpdateEl) lastUpdateEl.textContent = new Date().toLocaleTimeString('ko-KR');
         
         // 진행 중일 때 실시간 결과 표시
         if (results.breakoutStocks.length > 0) {
@@ -366,6 +371,8 @@ console.warn(`❌ ${ticker} 분석 실패: 조건 불만족`);
 
     renderStockCards(containerId, stocks, type) {
         const container = document.getElementById(containerId);
+        if (!container) return;
+        
         container.innerHTML = '';
         
         if (stocks.length === 0) {
@@ -428,43 +435,72 @@ console.warn(`❌ ${ticker} 분석 실패: 조건 불만족`);
         const statusEl = document.getElementById('status');
         const scanBtn = document.getElementById('scanBtn');
         
-        statusEl.textContent = message;
-        statusEl.className = `status status-${type}`;
+        if (statusEl) {
+            statusEl.textContent = message;
+            statusEl.className = `status status-${type}`;
+        }
         
         // 스캔 버튼 상태 업데이트
-        if (type === 'scanning') {
-            scanBtn.disabled = true;
-            scanBtn.textContent = '🔄 스캔 중...';
-        } else {
-            scanBtn.disabled = false;
-            scanBtn.textContent = '🔍 스캔 시작';
+        if (scanBtn) {
+            if (type === 'scanning') {
+                scanBtn.disabled = true;
+                scanBtn.textContent = '🔄 스캔 중...';
+            } else {
+                scanBtn.disabled = false;
+                scanBtn.textContent = '📊 전체 스캔';
+            }
         }
     }
 
     bindEvents() {
-        document.getElementById('scanBtn').addEventListener('click', () => {
-            this.scanStocks();
-        });
+        // 전체 스캔 버튼 (기존 기능)
+        const scanBtn = document.getElementById('scanBtn');
+        if (scanBtn) {
+            scanBtn.addEventListener('click', () => {
+                this.scanStocks();
+            });
+        }
         
         // 자동 스캔 설정
-        document.getElementById('autoScan').addEventListener('change', (e) => {
-            if (e.target.checked) {
-                this.startAutoScan();
-            } else {
-                this.stopAutoScan();
-            }
-        });
+        const autoScanCheck = document.getElementById('autoScan');
+        if (autoScanCheck) {
+            autoScanCheck.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this.startAutoScan();
+                } else {
+                    this.stopAutoScan();
+                }
+            });
+        }
         
         // 설정 변경 감지
-        document.getElementById('volatilityRange').addEventListener('input', (e) => {
-            const value = e.target.value;
-            document.getElementById('volatilityValue').textContent = `2-${value}%`;
-            StorageManager.updateSettings({ volatilityMax: value / 100 });
-        });
+        const volatilityRange = document.getElementById('volatilityRange');
+        if (volatilityRange) {
+            volatilityRange.addEventListener('input', (e) => {
+                const value = e.target.value;
+                const valueDisplay = document.getElementById('volatilityValue');
+                if (valueDisplay) {
+                    valueDisplay.textContent = `2-${value}%`;
+                }
+                StorageManager.updateSettings({ volatilityMax: value / 100 });
+            });
+        }
         
-        document.getElementById('minVolume').addEventListener('change', (e) => {
-            StorageManager.updateSettings({ minVolume: parseInt(e.target.value) });
-        });
+        const minVolumeSelect = document.getElementById('minVolume');
+        if (minVolumeSelect) {
+            minVolumeSelect.addEventListener('change', (e) => {
+                StorageManager.updateSettings({ minVolume: parseInt(e.target.value) });
+            });
+        }
+        
+        // 데모 모드 토글
+        const demoModeCheck = document.getElementById('demoMode');
+        if (demoModeCheck) {
+            demoModeCheck.addEventListener('change', (e) => {
+                this.demoMode = e.target.checked;
+                console.log(`데모 모드: ${this.demoMode ? 'ON' : 'OFF'}`);
+            });
+        }
     }
 
     startAutoScan() {

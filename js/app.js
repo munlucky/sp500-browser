@@ -2,6 +2,7 @@
 class App {
     constructor() {
         this.scanner = null;
+        this.breakoutTracker = null;
         this.isInitialized = false;
     }
 
@@ -14,6 +15,9 @@ class App {
             
             // 스캐너 초기화
             this.scanner = await initScanner();
+            
+            // 돌파 추적 시스템 초기화
+            this.breakoutTracker = await initBreakoutTracker();
             
             // 알림 관리자 초기화
             await NotificationManager.init();
@@ -204,6 +208,9 @@ class App {
                 if (this.scanner && this.scanner.autoScanInterval) {
                     this.scanner.stopAutoScan();
                 }
+                if (this.breakoutTracker && this.breakoutTracker.isTracking) {
+                    this.breakoutTracker.stopRealTimeTracking();
+                }
                 console.log('🧹 앱 종료 전 정리 작업 완료');
             });
 
@@ -229,6 +236,12 @@ class App {
                 if (this.scanner && this.scanner.autoScanInterval) {
                     this.scanner.stopAutoScan();
                     this.showStatus('오프라인 모드 - 자동 스캔 중지됨', 'error');
+                }
+                
+                // 오프라인 시 돌파 추적 중지
+                if (this.breakoutTracker && this.breakoutTracker.isTracking) {
+                    this.breakoutTracker.stopRealTimeTracking();
+                    this.showStatus('오프라인 모드 - 실시간 추적 중지됨', 'error');
                 }
             }
         };
@@ -293,9 +306,24 @@ class App {
         try {
             // 최소한의 UI 동작만 보장
             const scanBtn = document.getElementById('scanBtn');
+            const generateBtn = document.getElementById('generateWatchListBtn');
+            const trackingBtn = document.getElementById('trackingBtn');
+            
             if (scanBtn) {
                 scanBtn.addEventListener('click', () => {
                     this.showError('초기화 오류로 인해 스캔 기능을 사용할 수 없습니다.');
+                });
+            }
+            
+            if (generateBtn) {
+                generateBtn.addEventListener('click', () => {
+                    this.showError('초기화 오류로 인해 워치리스트 생성 기능을 사용할 수 없습니다.');
+                });
+            }
+            
+            if (trackingBtn) {
+                trackingBtn.addEventListener('click', () => {
+                    this.showError('초기화 오류로 인해 돌파 추적 기능을 사용할 수 없습니다.');
                 });
             }
             
@@ -346,6 +374,10 @@ class App {
     getScanner() {
         return this.scanner;
     }
+    
+    getBreakoutTracker() {
+        return this.breakoutTracker;
+    }
 
     isReady() {
         return this.isInitialized && this.scanner !== null;
@@ -359,9 +391,14 @@ class App {
             this.scanner.stopAutoScan();
         }
         
+        if (this.breakoutTracker && this.breakoutTracker.isTracking) {
+            this.breakoutTracker.stopRealTimeTracking();
+        }
+        
         // 재초기화
         this.isInitialized = false;
         this.scanner = null;
+        this.breakoutTracker = null;
         
         // 3초 후 재시작
         setTimeout(() => {
@@ -383,6 +420,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // 전역 객체로 노출 (디버깅용)
         window.sp500App = app;
+        window.stockScanner = app.getScanner();
+        window.breakoutTracker = app.getBreakoutTracker();
         
         console.log('🎉 모든 초기화 완료!');
         
