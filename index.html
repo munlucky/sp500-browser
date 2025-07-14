@@ -295,7 +295,7 @@
                     // 기본 설정 적용
                     const demoModeCheck = document.getElementById('demoMode');
                     if (demoModeCheck) {
-                        demoModeCheck.checked = true; // 데모 모드 기본 활성화
+                        demoModeCheck.checked = false; // 데모 모드 기본 비활성화
                         demoModeCheck.addEventListener('change', (e) => {
                             if (window.stockScanner) {
                                 window.stockScanner.demoMode = e.target.checked;
