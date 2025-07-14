@@ -288,6 +288,61 @@
         </div>
     </div>
 
+    <!-- 스캔 프로그래스 팝업 -->
+    <div id="scanProgressModal" class="modal hidden">
+        <div class="modal-content progress-modal">
+            <div class="modal-header">
+                <h3>📊 스캔 진행 상황</h3>
+                <button id="closeScanProgressBtn" class="modal-close">✖️</button>
+            </div>
+            <div class="modal-body">
+                <div class="progress-info">
+                    <div class="progress-stats">
+                        <div class="progress-stat">
+                            <span class="stat-label">현재 종목:</span>
+                            <span class="stat-value" id="currentTicker">-</span>
+                        </div>
+                        <div class="progress-stat">
+                            <span class="stat-label">진행률:</span>
+                            <span class="stat-value" id="scanProgress">0%</span>
+                        </div>
+                        <div class="progress-stat">
+                            <span class="stat-label">처리 완료:</span>
+                            <span class="stat-value" id="completedCount">0</span>
+                        </div>
+                        <div class="progress-stat">
+                            <span class="stat-label">전체 종목:</span>
+                            <span class="stat-value" id="totalCount">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="scan-results-preview">
+                        <div class="result-preview">
+                            <span class="result-label">🚀 돌파 발견:</span>
+                            <span class="result-count" id="breakoutCount">0</span>
+                        </div>
+                        <div class="result-preview">
+                            <span class="result-label">⏰ 대기 중:</span>
+                            <span class="result-count" id="waitingCount">0</span>
+                        </div>
+                        <div class="result-preview">
+                            <span class="result-label">❌ 오류:</span>
+                            <span class="result-count" id="errorCount">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="scan-status" id="scanStatus">스캔 준비 중...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading overlay (초기화 중 표시) -->
     <div id="loadingOverlay" style="
         position: fixed;
@@ -469,6 +524,16 @@
                         });
                     }
                     
+                    // 프로그래스 모달 닫기 버튼
+                    const closeScanProgressBtn = document.getElementById('closeScanProgressBtn');
+                    const scanProgressModal = document.getElementById('scanProgressModal');
+                    
+                    if (closeScanProgressBtn && scanProgressModal) {
+                        closeScanProgressBtn.addEventListener('click', () => {
+                            scanProgressModal.classList.add('hidden');
+                        });
+                    }
+                    
                     // 알림 설정 (기존 기능 유지)
                     if (notificationBtn) {
                         notificationBtn.addEventListener('click', () => {
@@ -479,7 +544,7 @@
                     }
                     
                     // 모달 외부 클릭시 닫기
-                    [settingsModal, helpModal].forEach(modal => {
+                    [settingsModal, helpModal, scanProgressModal].forEach(modal => {
                         if (modal) {
                             modal.addEventListener('click', (e) => {
                                 if (e.target === modal) {

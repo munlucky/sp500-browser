@@ -132,7 +132,7 @@ class APIManager {
         const source = this.dataSources[0]; // Yahoo Finance만 사용
         
         try {
-            // API 상세 로그는 console.log만 사용
+            // API 상세 로그는 console.log만 사용 (로거에서 제외)
             if (window.originalConsole) {
                 window.originalConsole.log(`🔄 ${source.name}에서 ${ticker} 데이터 시도...`);
             }
@@ -142,13 +142,14 @@ class APIManager {
             
             const data = await this.callDataSourceAPI(this.dataSources[0], ticker);
             if (data) {
+                // API 성공 로그는 console.log만 사용 (로거에서 제외)
                 if (window.originalConsole) {
                     window.originalConsole.log(`✅ ${source.name}에서 ${ticker} 데이터 성공`);
                 }
                 return data;
             }
         } catch (error) {
-            // API 오류는 console.log만 사용
+            // API 오류는 console.log만 사용 (로거에서 제외)
             if (window.originalConsole) {
                 window.originalConsole.warn(`⚠️ ${source.name} 실패 (${ticker}): ${error.message}`);
             }
@@ -213,6 +214,7 @@ class APIManager {
     async queueRequest(ticker) {
         // 중복 요청 감지
         if (this.pendingRequests.has(ticker)) {
+            // 중복 요청 감지는 console.log만 사용 (로거에서 제외)
             if (window.originalConsole) {
                 window.originalConsole.warn(`⚠️ ${ticker} 중복 요청 감지됨, 무시`);
             }
@@ -239,7 +241,7 @@ class APIManager {
             this.pendingRequests.add(ticker);
             
             try {
-                // Yahoo Finance에서 데이터 가져오기 시도 (console.log만 사용)
+                // Yahoo Finance에서 데이터 가져오기 시도 (console.log만 사용, 로거에서 제외)
                 if (window.originalConsole) {
                     window.originalConsole.log(`📡 ${ticker} 데이터 요청 중... (시도 ${retryCount + 1}/${this.maxRetries + 1})`);
                 }
@@ -248,6 +250,7 @@ class APIManager {
                 // 성공 시 실패 목록에서 제거 및 처리 중 목록에서도 제거
                 this.failedTickers.delete(ticker);
                 this.pendingRequests.delete(ticker);
+                // 개별 성공 로그는 console.log만 사용 (로거에서 제외)
                 if (window.originalConsole) {
                     window.originalConsole.log(`✅ ${ticker} 데이터 가져오기 성공`);
                 }
@@ -257,7 +260,7 @@ class APIManager {
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 
             } catch (error) {
-                // API 상세 오류는 console.log만 사용
+                // API 상세 오류는 console.log만 사용 (로거에서 제외)
                 if (window.originalConsole) {
                     window.originalConsole.warn(`❌ ${ticker} 데이터 가져오기 실패 (시도 ${retryCount + 1}): ${error.message}`);
                 }
@@ -267,6 +270,7 @@ class APIManager {
                     // 실패한 항목을 재시도 큐에 추가하고 현재 처리 중 목록에서 제거
                     this.pendingRequests.delete(ticker);
                     this.addToRetryQueue({ ticker, resolve, reject, retryCount: retryCount + 1 });
+                    // 재시도 큐 추가는 console.log만 사용 (로거에서 제외)
                     if (window.originalConsole) {
                         window.originalConsole.log(`🔄 ${ticker} 재시도 큐에 추가됨 (${retryCount + 1}/${this.maxRetries})`);
                     }
@@ -274,10 +278,7 @@ class APIManager {
                     // 최대 재시도 횟수 초과 시 실패 목록에 추가 및 처리 중 목록에서 제거
                     this.failedTickers.add(ticker);
                     this.pendingRequests.delete(ticker);
-                    // 최종 실패는 logger에 기록 (중요한 결과)
-                    if (window.logger) {
-                        window.logger.error(`${ticker} 최대 재시도 횟수 초과, 실패 처리`);
-                    }
+                    // 최종 실패는 logger에 기록하지 않음 (중요한 결과가 아님)
                     reject(new Error(`${ticker}: ${error.message} (${this.maxRetries + 1}회 시도 후 실패)`));
                 }
                 
@@ -307,7 +308,7 @@ class APIManager {
             return;
         }
 
-        // 재시도 큐 처리는 console.log만 사용
+        // 재시도 큐 처리는 console.log만 사용 (로거에서 제외)
         if (window.originalConsole) {
             window.originalConsole.log(`🔄 재시도 큐 처리 중... ${this.retryQueue.length}개 항목`);
         }
@@ -317,6 +318,7 @@ class APIManager {
             while (this.retryQueue.length > 0) {
                 const retryItem = this.retryQueue.shift();
                 this.requestQueue.push(retryItem);
+                // 메인 큐 재추가는 console.log만 사용 (로거에서 제외)
                 if (window.originalConsole) {
                     window.originalConsole.log(`↻ ${retryItem.ticker} 메인 큐에 재추가`);
                 }
@@ -424,12 +426,13 @@ class APIManager {
      * Yahoo Finance 데이터 파싱 (개선된 버전)
      */
     parseYahooData(data, ticker) {
-        // 파싱 상세 로그는 console.log만 사용
+        // 파싱 상세 로그는 console.log만 사용 (로거에서 제외)
         if (window.originalConsole) {
             window.originalConsole.log(`📊 Yahoo Finance 데이터 파싱 시작: ${ticker}`);
         }
         
         if (!data.chart?.result?.[0]) {
+            // 파싱 오류는 console.log만 사용 (로거에서 제외)
             if (window.originalConsole) {
                 window.originalConsole.error('Yahoo Finance 응답 구조 오류:', data);
             }
@@ -441,6 +444,7 @@ class APIManager {
         const timestamps = result.timestamp;
         
         if (!quote || !timestamps || timestamps.length === 0) {
+            // 파싱 오류는 console.log만 사용 (로거에서 제외)
             if (window.originalConsole) {
                 window.originalConsole.error('Yahoo Finance 필수 데이터 누락:', { quote: !!quote, timestamps: timestamps?.length });
             }
@@ -466,7 +470,7 @@ class APIManager {
         const yesterdayLow = quote.low[yesterdayIndex] || currentPrice;
         const yesterdayVolume = quote.volume[yesterdayIndex] || 0;
         
-        // 파싱 완료 로그도 console.log만 사용
+        // 파싱 완료 로그도 console.log만 사용 (로거에서 제외)
         if (window.originalConsole) {
             window.originalConsole.log(`✅ ${ticker} Yahoo Finance 파싱 완료: $${currentPrice.toFixed(2)}`);
         }
@@ -510,7 +514,7 @@ class APIManager {
                     };
                 }
             } catch (error) {
-                // 변환 실패는 console.log만 사용 (상세 로그)
+                // 변환 실패는 console.log만 사용 (로거에서 제외)
                 if (window.originalConsole) {
                     window.originalConsole.warn(`타임스탬프 변환 실패 [${i}]:`, error);
                 }
