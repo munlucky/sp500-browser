@@ -355,14 +355,15 @@ class NotificationManager {
     }
     
     static getIconDataUrl() {
-        // 간단한 SVG 아이콘을 데이터 URL로 변환
+        // 간단한 SVG 아이콘을 데이터 URL로 변환 (Unicode 안전 인코딩)
         const svg = `
             <svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
                 <rect width="192" height="192" fill="#2563eb" rx="20"/>
-                <text x="96" y="120" font-family="Arial, sans-serif" font-size="80" text-anchor="middle" fill="white">📈</text>
+                <text x="96" y="120" font-family="Arial, sans-serif" font-size="80" text-anchor="middle" fill="white">↗</text>
             </svg>
         `;
-        return `data:image/svg+xml;base64,${btoa(svg)}`;
+        // Unicode 안전 base64 인코딩
+        return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
     }
     
     static setupPeriodicNotifications() {

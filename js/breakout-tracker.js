@@ -36,25 +36,13 @@ class BreakoutTracker {
       console.log('📋 래리 윌리엄스 돌파 대기 종목 선별 시작...');
       this.updateStatus('워치리스트 생성 중...', 'scanning');
       
-      // 캐시된 워치리스트 후보 먼저 확인
-      const cachedCandidates = StorageManager.getCachedWatchListCandidates();
-      if (cachedCandidates && cachedCandidates.length > 0) {
-          console.log(`📦 캐시된 워치리스트 후보 ${cachedCandidates.length}개 사용`);
-          this.updateStatus(`캐시된 워치리스트 로드됨: ${cachedCandidates.length}개 후보`, 'completed');
-          
-          // 캐시된 데이터로 워치리스트 설정
-          cachedCandidates.forEach(candidate => {
-              this.watchList.set(candidate.ticker, candidate);
-          });
-          
-          this.displayWatchList();
-          return cachedCandidates;
-      }
+      // 캐시된 데이터 제외하고 새로운 스캔 실행
+      console.log('🔄 캐시된 항목을 제외하고 새로운 워치리스트 생성 시작...');
       
-      // 캐시가 없거나 만료된 경우 새로 생성
-      console.log('💫 새 워치리스트 후보 생성 중...');
       const candidates = [];
       const settings = StorageManager.getSettings();
+      let skippedCount = 0;
+      let scannedCount = 0;
       
       try {
           // S&P 500 종목들을 분석
@@ -65,10 +53,20 @@ class BreakoutTracker {
               const ticker = tickers[i];
               const progress = Math.round(((i + 1) / totalTickers) * 100);
               
-              this.updateStatus(`워치리스트 생성 중... ${ticker} (${i + 1}/${totalTickers}) ${progress}%`, 'scanning');
+              // 캐시된 데이터가 있는지 확인
+              const cachedData = StorageManager.getCachedData(`stock_${ticker}`);
+              if (cachedData) {
+                  skippedCount++;
+                  console.log(`⏭️ ${ticker} 캐시된 데이터 있음, 건너뜀`);
+                  this.updateStatus(`워치리스트 생성 중... ${ticker} (캐시됨, 건너뜀) (${i + 1}/${totalTickers}) ${progress}%`, 'scanning');
+                  continue;
+              }
+              
+              scannedCount++;
+              this.updateStatus(`워치리스트 생성 중... ${ticker} (새로 스캔) (${i + 1}/${totalTickers}) ${progress}%`, 'scanning');
               
               try {
-                  // 전날 데이터만 사용하여 분석
+                  // 캐시되지 않은 종목만 새로 데이터 가져오기
                   const yesterdayData = await this.getYesterdayData(ticker);
                   if (!yesterdayData) continue;
                   
@@ -105,9 +103,9 @@ class BreakoutTracker {
           // 캐시에 저장 (24시간 유효)
           StorageManager.saveWatchListCandidates(topCandidates);
           
-          this.updateStatus(`워치리스트 생성 완료: ${topCandidates.length}개 종목 (24시간 캐시됨)`, 'completed');
+          this.updateStatus(`워치리스트 생성 완료: ${topCandidates.length}개 종목 (새로 스캔: ${scannedCount}개, 캐시 건너뜀: ${skippedCount}개)`, 'completed');
           
-          console.log(`✅ 돌파 대기 워치리스트 생성 완료: ${topCandidates.length}개 종목`);
+          console.log(`✅ 돌파 대기 워치리스트 생성 완료: ${topCandidates.length}개 종목 (새로 스캔: ${scannedCount}개, 캐시된 항목 건너뜀: ${skippedCount}개)`);
           return topCandidates;
           
       } catch (error) {
@@ -560,8 +558,11 @@ class BreakoutTracker {
   updateTrackingUI(isTracking) {
       const trackBtn = document.getElementById('trackingBtn');
       if (trackBtn) {
-          trackBtn.textContent = isTracking ? '⏹️ 추적 중지' : '▶️ 추적 시작';
-          trackBtn.className = isTracking ? 'track-btn tracking' : 'track-btn';
+          // 아이콘과 텍스트를 분리된 구조로 업데이트
+          trackBtn.innerHTML = isTracking ? 
+              '<span class="btn-icon">⏹️</span><span class="btn-text">추적 중지</span>' : 
+              '<span class="btn-icon">▶️</span><span class="btn-text">추적 시작</span>';
+          trackBtn.className = isTracking ? 'nav-btn success tracking' : 'nav-btn success';
       }
       
       const status = document.getElementById('trackingStatus');

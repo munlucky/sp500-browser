@@ -340,6 +340,7 @@ class App {
         if (statusEl) {
             statusEl.textContent = message;
             statusEl.className = `status status-${type}`;
+            statusEl.style.display = 'block'; // 상태 메시지가 있을 때는 표시
             
             // 3초 후 기본 메시지로 돌아가기 (에러가 아닌 경우)
             if (type !== 'error' && type !== 'scanning') {
@@ -347,6 +348,7 @@ class App {
                     if (statusEl.textContent === message) {
                         statusEl.textContent = '준비됨';
                         statusEl.className = 'status';
+                        statusEl.style.display = 'none'; // "준비됨" 상태일 때는 숨김
                     }
                 }, 3000);
             }

@@ -49,17 +49,64 @@
 </head>
 <body>
     <div class="app">
-        <!-- 헤더 -->
-        <header class="header">
-            <h1>📈 S&P 500 실시간 돌파 스캐너</h1>
-            <div class="controls">
-                <button id="generateWatchListBtn" class="scan-btn" title="래리 윌리엄스 전략으로 돌파 대기 종목 선별">🔍 워치리스트 생성</button>
-                <button id="trackingBtn" class="track-btn" title="실시간 돌파 추적">▶️ 추적 시작</button>
-                <button id="scanBtn" class="scan-btn" title="전체 스캔 (기존 기능)">📊 전체 스캔</button>
-                <button id="notificationBtn" class="notification-btn" title="브라우저 알림 설정">🔔 알림 설정</button>
-                <div class="status" id="status">준비됨</div>
+        <!-- 타이틀 헤더 -->
+        <header class="title-header">
+            <div class="title-content">
+                <h1>📈 S&P 500 실시간 돌파 스캐너</h1>
+                <p class="subtitle">래리 윌리엄스 변동성 돌파 전략 기반 자동 스캐닝</p>
             </div>
         </header>
+
+        <!-- 네비게이션 바 -->
+        <nav class="navigation-bar">
+            <div class="nav-content">
+                <div class="main-controls">
+                    <button id="generateWatchListBtn" class="nav-btn primary" title="래리 윌리엄스 전략으로 돌파 대기 종목 선별">
+                        <span class="btn-icon">🔍</span>
+                        <span class="btn-text">워치리스트 생성</span>
+                    </button>
+                    <button id="trackingBtn" class="nav-btn success" title="실시간 돌파 추적">
+                        <span class="btn-icon">▶️</span>
+                        <span class="btn-text">추적 시작</span>
+                    </button>
+                    <button id="scanBtn" class="nav-btn secondary" title="전체 스캔 (기존 기능)">
+                        <span class="btn-icon">📊</span>
+                        <span class="btn-text">전체 스캔</span>
+                    </button>
+                </div>
+                
+                <div class="utility-controls">
+                    <!-- 설정 드롭다운 메뉴 -->
+                    <div class="settings-dropdown">
+                        <button id="settingsDropdownBtn" class="nav-btn utility" title="설정 메뉴">
+                            <span class="btn-icon">⚙️</span>
+                            <span class="btn-text">설정</span>
+                        </button>
+                        <div id="settingsDropdownMenu" class="settings-dropdown-menu hidden">
+                            <button id="notificationBtn" class="dropdown-item" title="브라우저 알림 설정">
+                                <span class="dropdown-icon">🔔</span>
+                                <span>알림 설정</span>
+                            </button>
+                            <button id="logBtn" class="dropdown-item" title="시스템 로그 보기 (Ctrl+L)">
+                                <span class="dropdown-icon">📋</span>
+                                <span>로그 보기</span>
+                            </button>
+                            <button id="settingsBtn" class="dropdown-item" title="스캐너 설정">
+                                <span class="dropdown-icon">⚙️</span>
+                                <span>스캐너 설정</span>
+                            </button>
+                            <button id="helpBtn" class="dropdown-item" title="사용법 및 전략 안내">
+                                <span class="dropdown-icon">💡</span>
+                                <span>도움말</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 상태 표시 -->
+            <div class="status" id="status" style="display: none;">준비됨</div>
+        </nav>
 
         <!-- 시장 상태 및 추적 현황 -->
         <section class="tracking-section">
@@ -85,19 +132,6 @@
             </div>
         </section>
 
-        <!-- 래리 윌리엄스 전략 설명 -->
-        <section class="results-section">
-            <div class="larry-williams-info">
-                <h4>📚 래리 윌리엄스 변동성 돌파 전략</h4>
-                <p><strong>핵심 원리:</strong> 횡보 후 변동성 돌파를 이용한 단기 매매 전략</p>
-                <ul>
-                    <li><strong>진입 조건:</strong> 전일 종가 + (전일 고가 - 전일 저가) × 0.6</li>
-                    <li><strong>선별 조건:</strong> 2-8% 변동성, 100만주 이상 거래량, 횡보 패턴</li>
-                    <li><strong>리스크 관리:</strong> 진입가 대비 -5% 손절, +2%/+5% 목표가</li>
-                    <li><strong>추가 필터:</strong> 거래량 증가, 저항선 근처, 상승 추세</li>
-                </ul>
-            </div>
-        </section>
 
         <!-- 돌파 대기 워치리스트 -->
         <section class="results-section">
@@ -151,75 +185,106 @@
             </div>
         </section>
 
-        <!-- 설정 패널 -->
-        <section class="settings-section">
-            <h2>⚙️ 설정</h2>
-            <div class="settings-grid">
-                <div class="setting-item">
-                    <label for="volatilityRange">변동성 범위:</label>
-                    <input type="range" id="volatilityRange" min="2" max="10" value="6" step="0.5" 
-                           title="최대 변동성 한계 설정 (최소값은 항상 2%)">
-                    <span id="volatilityValue">2-6%</span>
-                </div>
-                <div class="setting-item">
-                    <label for="minVolume">최소 거래량:</label>
-                    <select id="minVolume" title="종목 필터링을 위한 최소 거래량">
-                        <option value="500000">50만주</option>
-                        <option value="1000000" selected>100만주</option>
-                        <option value="2000000">200만주</option>
-                        <option value="5000000">500만주</option>
-                    </select>
-                </div>
-                <div class="setting-item">
-                    <label for="autoScan">자동 스캔:</label>
-                    <div>
-                        <input type="checkbox" id="autoScan" title="5분마다 자동으로 스캔 실행">
-                        <span>5분마다 자동 실행</span>
-                    </div>
-                </div>
-                <div class="setting-item">
-                    <label>스캔 모드:</label>
-                    <div>
-                        <input type="checkbox" id="demoMode" title="데모 데이터 사용 (실제 API 키 없이 테스트)">
-                        <span>데모 모드 (테스트용)</span>
-                    </div>
-                </div>
-                <div class="setting-item">
-                    <label for="trackingInterval">추적 주기:</label>
-                    <select id="trackingInterval">
-                        <option value="15">15초</option>
-                        <option value="30" selected>30초</option>
-                        <option value="60">1분</option>
-                        <option value="300">5분</option>
-                    </select>
-                </div>
-                <div class="setting-item">
-                    <label for="riskAmount">리스크 금액:</label>
-                    <input type="number" id="riskAmount" value="1000" min="100" step="100">
-                    <span>$ (주문 수량 계산용)</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- 도움말 섹션 -->
-        <section class="results-section">
-            <h2>💡 사용법</h2>
-            <div style="padding: 20px; line-height: 1.6;">
-                <p><strong>래리 윌리엄스 돌파 전략 사용법:</strong></p>
-                <ol style="margin: 15px 0; padding-left: 20px;">
-                    <li><strong>워치리스트 생성:</strong> 전날 데이터로 돌파 대기 종목 선별</li>
-                    <li><strong>실시간 추적:</strong> 장중에 미리 계산된 진입가 돌파 감지</li>
-                    <li><strong>자동 알림:</strong> 돌파 즉시 브라우저 알림 + 모의 주문</li>
-                </ol>
-                <p><strong>진입가 공식:</strong> 전일 종가 + (전일 고가 - 전일 저가) × 0.6</p>
-                <p><strong>단축키:</strong> Ctrl+Enter (또는 Cmd+Enter)로 전체 스캔 시작</p>
-                <p><strong>데모 모드:</strong> 실제 API 없이도 전체 시스템 테스트 가능</p>
-            </div>
-        </section>
 
         <!-- 오프라인 표시 -->
         <div id="offlineIndicator" class="offline-indicator hidden">
             📡 오프라인 모드 - 캐시된 데이터 표시 중
+        </div>
+    </div>
+
+    <!-- 설정 모달 -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ 스캐너 설정</h3>
+                <button id="closeSettingsBtn" class="modal-close">✖️</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label for="volatilityRange">변동성 범위:</label>
+                        <input type="range" id="volatilityRange" min="2" max="10" value="6" step="0.5" 
+                               title="최대 변동성 한계 설정 (최소값은 항상 2%)">
+                        <span id="volatilityValue">2-6%</span>
+                    </div>
+                    <div class="setting-item">
+                        <label for="minVolume">최소 거래량:</label>
+                        <select id="minVolume" title="종목 필터링을 위한 최소 거래량">
+                            <option value="500000">50만주</option>
+                            <option value="1000000" selected>100만주</option>
+                            <option value="2000000">200만주</option>
+                            <option value="5000000">500만주</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="autoScan">자동 스캔:</label>
+                        <div>
+                            <input type="checkbox" id="autoScan" title="5분마다 자동으로 스캔 실행">
+                            <span>5분마다 자동 실행</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label>스캔 모드:</label>
+                        <div>
+                            <input type="checkbox" id="demoMode" title="데모 데이터 사용 (실제 API 키 없이 테스트)">
+                            <span>데모 모드 (테스트용)</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="trackingInterval">추적 주기:</label>
+                        <select id="trackingInterval">
+                            <option value="15">15초</option>
+                            <option value="30" selected>30초</option>
+                            <option value="60">1분</option>
+                            <option value="300">5분</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="riskAmount">리스크 금액:</label>
+                        <input type="number" id="riskAmount" value="1000" min="100" step="100">
+                        <span>$ (주문 수량 계산용)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 도움말 모달 -->
+    <div id="helpModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💡 래리 윌리엄스 돌파 전략 & 사용법</h3>
+                <button id="closeHelpBtn" class="modal-close">✖️</button>
+            </div>
+            <div class="modal-body">
+                <!-- 전략 설명 -->
+                <div style="background: rgba(59, 130, 246, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+                    <h4 style="margin: 0 0 10px 0; color: #3b82f6;">📚 전략 개요</h4>
+                    <p><strong>핵심 원리:</strong> 횡보 후 변동성 돌파를 이용한 단기 매매 전략</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>진입 조건:</strong> 전일 종가 + (전일 고가 - 전일 저가) × 0.6</li>
+                        <li><strong>선별 조건:</strong> 2-8% 변동성, 100만주 이상 거래량, 횡보 패턴</li>
+                        <li><strong>리스크 관리:</strong> 진입가 대비 -5% 손절, +2%/+5% 목표가</li>
+                        <li><strong>추가 필터:</strong> 거래량 증가, 저항선 근처, 상승 추세</li>
+                    </ul>
+                </div>
+
+                <!-- 사용법 -->
+                <div style="background: rgba(16, 185, 129, 0.05); padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+                    <h4 style="margin: 0 0 10px 0; color: #10b981;">🚀 사용 방법</h4>
+                    <ol style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>워치리스트 생성:</strong> 전날 데이터로 돌파 대기 종목 선별</li>
+                        <li><strong>실시간 추적:</strong> 장중에 미리 계산된 진입가 돌파 감지</li>
+                        <li><strong>자동 알림:</strong> 돌파 즉시 브라우저 알림 + 모의 주문</li>
+                    </ol>
+                    
+                    <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(16, 185, 129, 0.2);">
+                        <p><strong>🔗 단축키:</strong> Ctrl+Enter (또는 Cmd+Enter)로 전체 스캔 시작</p>
+                        <p><strong>📋 로그:</strong> Ctrl+L (또는 Cmd+L)로 실시간 로그 확인</p>
+                        <p><strong>🎭 데모 모드:</strong> 실제 API 없이도 전체 시스템 테스트 가능</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -244,9 +309,12 @@
     </div>
 
     <!-- 스크립트 로드 순서 중요 -->
+    <script src="js/logger.js"></script> <!-- 로그 시스템 (가장 먼저 로드) -->
     <script src="js/storage.js"></script>
     <script src="js/calculator.js"></script>
     <script src="js/notifications.js"></script>
+    <script src="js/api-manager.js"></script> <!-- API 관리자 (Alpha Vantage 제한 해결) -->
+    <script src="js/smart-scanner.js"></script> <!-- 스마트 스캐너 (효율적 스캔 전략) -->
     <script src="js/scanner.js"></script>
     <script src="js/breakout-tracker.js"></script> <!-- 새로운 돌파 추적 시스템 -->
     <script src="js/app.js"></script>
@@ -285,10 +353,16 @@
 
     <!-- 추가 초기화 스크립트 -->
     <script>
-        // 돌파 추적 시스템 통합 스크립트
+        // API 관리자 및 스마트 스캐너 통합 스크립트
         document.addEventListener('DOMContentLoaded', () => {
-            // 초기화 완료 대기 후 돌파 추적 시스템 설정
+            // 초기화 완료 대기 후 시스템 설정
             setTimeout(() => {
+                // 스마트 스캐너 초기화
+                if (window.smartScanner) {
+                    console.log('✅ 스마트 스캐너 사용 가능');
+                }
+                
+                // 돌파 추적 시스템 설정
                 if (typeof breakoutTracker !== 'undefined' && breakoutTracker) {
                     console.log('✅ 돌파 추적 시스템 사용 가능');
                     
@@ -306,6 +380,120 @@
                 } else {
                     console.warn('⚠️ 돌파 추적 시스템을 찾을 수 없습니다.');
                 }
+                
+                // API 관리자 요청 기록 로드
+                if (window.apiManager) {
+                    console.log('✅ API 관리자 사용 가능');
+                    window.apiManager.loadRequestCounts();
+                    console.log('📊 API 상태:', window.apiManager.getAPIStatus());
+                }
+                
+                // 로그 시스템 초기화
+                if (window.logger) {
+                    console.log('✅ 로그 시스템 사용 가능');
+                    
+                    // 저장된 로그 불러오기
+                    window.logger.loadFromStorage();
+                    
+                    // 설정 드롭다운 이벤트 바인딩
+                    const settingsDropdownBtn = document.getElementById('settingsDropdownBtn');
+                    const settingsDropdownMenu = document.getElementById('settingsDropdownMenu');
+                    const settingsDropdown = document.querySelector('.settings-dropdown');
+                    
+                    if (settingsDropdownBtn && settingsDropdownMenu) {
+                        settingsDropdownBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            settingsDropdownMenu.classList.toggle('hidden');
+                            settingsDropdown.classList.toggle('active');
+                        });
+                        
+                        // 드롭다운 외부 클릭시 닫기
+                        document.addEventListener('click', () => {
+                            settingsDropdownMenu.classList.add('hidden');
+                            settingsDropdown.classList.remove('active');
+                        });
+                        
+                        // 드롭다운 내부 클릭시 이벤트 전파 중지
+                        settingsDropdownMenu.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                        });
+                    }
+                    
+                    // 개별 메뉴 아이템 이벤트 바인딩
+                    const logBtn = document.getElementById('logBtn');
+                    const settingsBtn = document.getElementById('settingsBtn');
+                    const helpBtn = document.getElementById('helpBtn');
+                    const notificationBtn = document.getElementById('notificationBtn');
+                    
+                    const settingsModal = document.getElementById('settingsModal');
+                    const helpModal = document.getElementById('helpModal');
+                    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+                    const closeHelpBtn = document.getElementById('closeHelpBtn');
+                    
+                    // 로그 버튼
+                    if (logBtn) {
+                        logBtn.addEventListener('click', () => {
+                            window.logger.toggle();
+                            settingsDropdownMenu.classList.add('hidden');
+                            settingsDropdown.classList.remove('active');
+                        });
+                    }
+                    
+                    // 설정 모달
+                    if (settingsBtn && settingsModal) {
+                        settingsBtn.addEventListener('click', () => {
+                            settingsModal.classList.remove('hidden');
+                            settingsDropdownMenu.classList.add('hidden');
+                            settingsDropdown.classList.remove('active');
+                        });
+                    }
+                    
+                    if (closeSettingsBtn && settingsModal) {
+                        closeSettingsBtn.addEventListener('click', () => {
+                            settingsModal.classList.add('hidden');
+                        });
+                    }
+                    
+                    // 도움말 모달
+                    if (helpBtn && helpModal) {
+                        helpBtn.addEventListener('click', () => {
+                            helpModal.classList.remove('hidden');
+                            settingsDropdownMenu.classList.add('hidden');
+                            settingsDropdown.classList.remove('active');
+                        });
+                    }
+                    
+                    if (closeHelpBtn && helpModal) {
+                        closeHelpBtn.addEventListener('click', () => {
+                            helpModal.classList.add('hidden');
+                        });
+                    }
+                    
+                    // 알림 설정 (기존 기능 유지)
+                    if (notificationBtn) {
+                        notificationBtn.addEventListener('click', () => {
+                            // 기존 알림 설정 로직
+                            settingsDropdownMenu.classList.add('hidden');
+                            settingsDropdown.classList.remove('active');
+                        });
+                    }
+                    
+                    // 모달 외부 클릭시 닫기
+                    [settingsModal, helpModal].forEach(modal => {
+                        if (modal) {
+                            modal.addEventListener('click', (e) => {
+                                if (e.target === modal) {
+                                    modal.classList.add('hidden');
+                                }
+                            });
+                        }
+                    });
+                    
+                    // 환영 메시지 (콘솔로만)
+                    console.log('✅ S&P 500 스캐너가 성공적으로 초기화되었습니다');
+                    console.log('📋 Ctrl+L (또는 Cmd+L)로 로그 패널을 열고 닫을 수 있습니다');
+                }
+                
             }, 2000);
         });
         

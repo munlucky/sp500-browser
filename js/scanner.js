@@ -216,7 +216,59 @@ class BrowserStockScanner {
         }
     }
 
-    async analyzeStock(ticker, settings) {
+    async smartScanStocks() {
+        if (this.isScanning) return;
+        
+        console.log('🚀 스마트 스캔 전략 시작...');
+        this.isScanning = true;
+        this.updateStatus('스마트 스캔 중...', 'scanning');
+        
+        try {
+            // 스마트 스캐너의 적응형 스캔 사용
+            const results = await window.smartScanner.adaptiveScan(this.sp500Tickers);
+            
+            // 기본 결과 구조로 변환
+            const formattedResults = {
+                breakoutStocks: results.breakoutStocks || [],
+                waitingStocks: results.waitingStocks || [],
+                totalScanned: results.totalScanned || 0,
+                errors: results.errors || 0,
+                strategy: results.strategy || 'adaptive',
+                timestamp: new Date().toISOString()
+            };
+            
+            // 로컬 스토리지에 저장
+            StorageManager.saveResults(formattedResults);
+            
+            // UI 업데이트
+            this.displayResults(formattedResults);
+            
+            // 돌파 알림
+            if (formattedResults.breakoutStocks.length > 0 && typeof NotificationManager !== 'undefined') {
+                NotificationManager.sendBreakoutAlert(formattedResults.breakoutStocks);
+            }
+            
+            const statusMessage = `스마트 스캔 완료 (${results.strategy}): ${formattedResults.totalScanned}개 스캔 ` +
+                `(돌파: ${formattedResults.breakoutStocks.length}, 대기: ${formattedResults.waitingStocks.length})`;
+            
+            console.log(`✅ ${statusMessage}`);
+            this.updateStatus(statusMessage, 'completed');
+            
+        } catch (error) {
+            console.error('❌ 스마트 스캔 중 오류:', error);
+            this.updateStatus('스마트 스캔 실패 - 기본 스캔으로 전환', 'error');
+            
+            // 에러 시 기본 스캔으로 폴백
+            setTimeout(() => {
+                this.scanStocks();
+            }, 2000);
+            
+        } finally {
+            this.isScanning = false;
+        }
+    }
+
+    async analyzeStock(ticker, settings, preLoadedData = null) {
         try {
             let stockData;
             
@@ -225,7 +277,16 @@ class BrowserStockScanner {
                 stockData = this.generateDemoData(ticker);
             } else {
                 // 실제 API 모드
-                const apiData = await this.fetchStockData(ticker);
+                let apiData;
+                
+                if (preLoadedData) {
+                    // 미리 로드된 데이터가 있으면 사용 (중복 호출 방지)
+                    apiData = preLoadedData;
+                } else {
+                    // 데이터가 없으면 새로 가져오기
+                    apiData = await this.fetchStockData(ticker);
+                }
+                
                 if (!apiData || !apiData.timeSeries) {
                     return null;
                 }
@@ -314,9 +375,26 @@ class BrowserStockScanner {
     }
 
     async fetchStockData(ticker) {
-        // 실제 Alpha Vantage API 호출
-        if (this.apiKey && this.apiKey !== 'demo') {
-            try {
+        // 데모 모드 확인
+        if (this.demoMode) {
+            return this.generateDemoData(ticker);
+        }
+
+        try {
+            // 새로운 API Manager 사용 (다중 소스)
+            if (window.apiManager) {
+                console.log(`📡 ${ticker}: API Manager로 데이터 요청...`);
+                const stockData = await window.apiManager.queueRequest(ticker);
+                
+                if (stockData) {
+                    stockData.ticker = ticker;
+                    console.log(`✅ ${ticker}: 데이터 조회 성공 - $${stockData.currentPrice?.toFixed(2) || 'N/A'}`);
+                    return stockData;
+                }
+            }
+            
+            // 기본 Alpha Vantage API (백업)
+            if (this.apiKey && this.apiKey !== 'demo') {
                 console.log(`📡 ${ticker} Alpha Vantage API 데이터 가져오는 중...`);
                 const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&apikey=${this.apiKey}`;
                 const response = await fetch(url);
@@ -324,19 +402,40 @@ class BrowserStockScanner {
                 if (response.ok) {
                     const data = await response.json();
                     
-                    if (data['Error Message'] || data['Note']) {
-                        throw new Error('API 제한 또는 오류');
+                    if (data['Error Message']) {
+                        console.warn(`❌ ${ticker}: ${data['Error Message']}`);
+                        return null;
                     }
                     
-                    return {
-                        timeSeries: data['Time Series (Daily)']
-                    };
+                    if (data['Note']) {
+                        console.warn(`⏰ ${ticker}: API 호출 제한`);
+                        return null;
+                    }
+                    
+                    if (data['Time Series (Daily)']) {
+                        const timeSeries = data['Time Series (Daily)'];
+                        const dates = Object.keys(timeSeries).sort().reverse();
+                        
+                        if (dates.length > 0) {
+                            const latestData = timeSeries[dates[0]];
+                            return {
+                                ticker,
+                                currentPrice: parseFloat(latestData['4. close']),
+                                yesterdayClose: parseFloat(latestData['4. close']),
+                                yesterdayHigh: parseFloat(latestData['2. high']),
+                                yesterdayLow: parseFloat(latestData['3. low']),
+                                yesterdayVolume: parseInt(latestData['5. volume']),
+                                timeSeries: timeSeries
+                            };
+                        }
+                    }
                 } else {
                     throw new Error(`HTTP ${response.status}`);
                 }
-            } catch (apiError) {
-                console.warn(`❌ ${ticker} Alpha Vantage API 실패:`, apiError);
             }
+            
+        } catch (error) {
+            console.warn(`❌ ${ticker} 데이터 가져오기 실패:`, error.message);
         }
         
         return null;
@@ -463,7 +562,14 @@ class BrowserStockScanner {
         const scanBtn = document.getElementById('scanBtn');
         if (scanBtn) {
             scanBtn.addEventListener('click', () => {
-                this.scanStocks();
+                // 스마트 스캐너 사용 여부 확인
+                if (window.smartScanner && !this.demoMode) {
+                    console.log('🧠 스마트 스캔 전략 사용');
+                    this.smartScanStocks();
+                } else {
+                    console.log('📊 기본 전체 스캔 사용');
+                    this.scanStocks();
+                }
             });
         }
         
