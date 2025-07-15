@@ -521,16 +521,17 @@ class BrowserStockScanner {
     }
 
     updateDashboard(results) {
-        // 대시보드 숫자 업데이트
+        // 통합된 통계 업데이트
         const breakoutCountEl = document.getElementById('breakoutCount');
         const waitingCountEl = document.getElementById('waitingCount');
         const totalScannedEl = document.getElementById('totalScanned');
-        const lastUpdateEl = document.getElementById('lastUpdate');
+        const errorCountEl = document.getElementById('errorCount');
         
-        if (breakoutCountEl) breakoutCountEl.textContent = results.breakoutStocks.length;
-        if (waitingCountEl) waitingCountEl.textContent = results.waitingStocks.length;
-        if (totalScannedEl) totalScannedEl.textContent = results.totalScanned;
-        if (lastUpdateEl) lastUpdateEl.textContent = new Date().toLocaleTimeString('ko-KR');
+        // 애니메이션과 함께 값 업데이트
+        this.updateStatWithAnimation(breakoutCountEl, results.breakoutStocks.length);
+        this.updateStatWithAnimation(waitingCountEl, results.waitingStocks.length);
+        this.updateStatWithAnimation(totalScannedEl, results.totalScanned);
+        this.updateStatWithAnimation(errorCountEl, results.errorCount || 0);
         
         // 진행 중일 때 실시간 결과 표시
         if (results.breakoutStocks.length > 0) {
@@ -558,9 +559,32 @@ class BrowserStockScanner {
             card.className = `stock-card ${type}`;
             card.onclick = () => this.openStockChart(stock.ticker);
             
-            const gapDisplay = type === 'waiting' 
-                ? `<div class="gap">돌파까지: $${stock.gapToEntry.toFixed(2)}</div>`
-                : '<div class="breakout-badge">돌파!</div>';
+            let gapDisplay, strategyDisplay = '';
+            
+            if (type === 'waiting') {
+                gapDisplay = `<div class="gap">돌파까지: $${stock.gapToEntry.toFixed(2)}</div>`;
+            } else {
+                // 돌파한 종목에 대한 진입 전략 결정
+                const entryStrategy = this.determineEntryStrategy(stock);
+                let strategyIcon = '';
+                let strategyColor = '';
+                
+                switch(entryStrategy.confidence) {
+                    case 'high': strategyIcon = '🟢'; strategyColor = '#16a34a'; break;
+                    case 'medium': strategyIcon = '🟡'; strategyColor = '#d97706'; break;
+                    case 'low': strategyIcon = '🔴'; strategyColor = '#dc2626'; break;
+                }
+                
+                gapDisplay = '<div class="breakout-badge">돌파!</div>';
+                strategyDisplay = `
+                    <div class="strategy-info" style="margin-top: 8px; padding: 6px; background: rgba(0,0,0,0.05); border-radius: 4px;">
+                        <div style="font-size: 0.85em; color: ${strategyColor};">
+                            ${strategyIcon} ${entryStrategy.name}
+                        </div>
+                        ${entryStrategy.note ? `<div style="font-size: 0.8em; color: #666; margin-top: 2px;">${entryStrategy.note}</div>` : ''}
+                    </div>
+                `;
+            }
             
             const riskReward = stock.riskRewardRatio ? ` (R:R ${stock.riskRewardRatio.toFixed(1)}:1)` : '';
             
@@ -583,10 +607,44 @@ class BrowserStockScanner {
                     <span>거래량: ${this.formatNumber(stock.volume)}</span>
                     <span>점수: ${stock.score || 0}/100</span>
                 </div>
+                ${strategyDisplay}
             `;
             
             container.appendChild(card);
         });
+    }
+
+    // 돌파 후 진입 전략 결정 (breakout-tracker.js와 동일한 로직)
+    determineEntryStrategy(stock) {
+        const currentPrice = stock.currentPrice;
+        const entryPrice = stock.entryPrice;
+        const breakoutGap = ((currentPrice - entryPrice) / entryPrice) * 100;
+        
+        if (breakoutGap <= 1.0) {
+            return {
+                name: '즉시 진입',
+                confidence: 'high',
+                note: '1% 이내 돌파, 높은 성공률'
+            };
+        } else if (breakoutGap <= 2.5) {
+            return {
+                name: '분할 진입',
+                confidence: 'medium',
+                note: '50% 포지션, 풀백 시 추가'
+            };
+        } else if (breakoutGap <= 5.0) {
+            return {
+                name: '풀백 대기',
+                confidence: 'medium',
+                note: `${(entryPrice * 1.01).toFixed(2)} 되돌림 대기`
+            };
+        } else {
+            return {
+                name: '관망',
+                confidence: 'low',
+                note: `돌파폭 ${breakoutGap.toFixed(1)}%로 추격 위험`
+            };
+        }
     }
 
     openStockChart(ticker) {
@@ -604,6 +662,22 @@ class BrowserStockScanner {
         return num.toString();
     }
 
+    // 통계 값 업데이트 시 애니메이션 추가
+    updateStatWithAnimation(element, newValue) {
+        if (!element) return;
+        
+        const currentValue = element.textContent;
+        if (currentValue !== newValue.toString()) {
+            element.textContent = newValue;
+            element.classList.add('updated');
+            
+            // 애니메이션 완료 후 클래스 제거
+            setTimeout(() => {
+                element.classList.remove('updated');
+            }, 600);
+        }
+    }
+
     updateStatus(message, type = 'default') {
         const statusEl = document.getElementById('status');
         const scanBtn = document.getElementById('scanBtn');
@@ -616,12 +690,20 @@ class BrowserStockScanner {
         
         // 스캔 버튼 상태 업데이트
         if (scanBtn) {
+            const btnIcon = scanBtn.querySelector('.btn-icon');
+            const btnTitle = scanBtn.querySelector('.btn-title');
+            const btnSubtitle = scanBtn.querySelector('.btn-subtitle');
+            
             if (type === 'scanning') {
                 scanBtn.disabled = true;
-                scanBtn.textContent = '🔄 스캔 중...';
+                if (btnIcon) btnIcon.textContent = '🔄';
+                if (btnTitle) btnTitle.textContent = '스캔 중...';
+                if (btnSubtitle) btnSubtitle.textContent = '분석 진행 중';
             } else {
                 scanBtn.disabled = false;
-                scanBtn.textContent = '📊 전체 스캔';
+                if (btnIcon) btnIcon.textContent = '🚀';
+                if (btnTitle) btnTitle.textContent = '스마트 스캔';
+                if (btnSubtitle) btnSubtitle.textContent = 'S&P 500 돌파 전략 분석';
             }
         }
     }

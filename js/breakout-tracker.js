@@ -350,36 +350,104 @@ class BreakoutTracker {
   handleBreakout(breakoutData) {
       console.log(`📋 ${breakoutData.ticker} 돌파 처리 중...`);
       
-      // 1. 모의 주문 생성
-      const order = this.createSimulatedOrder(breakoutData);
+      // 돌파 후 진입 전략 결정
+      const entryStrategy = this.determineEntryStrategy(breakoutData);
       
-      // 2. 주문 저장
-      this.saveOrder(order);
+      // 전략에 따른 모의 주문 생성
+      const order = this.createSimulatedOrder(breakoutData, entryStrategy);
       
-      // 3. 화면 알림
-      this.showBreakoutNotification(breakoutData);
+      // 주문 저장 (관망 전략이 아닌 경우에만)
+      if (order) {
+          this.saveOrder(order);
+      }
       
-      // 4. 로그 기록
-      console.log(`✅ ${breakoutData.ticker} 돌파 처리 완료`);
+      // 화면 알림 (전략 정보 포함)
+      this.showBreakoutNotification(breakoutData, entryStrategy);
+      
+      // 로그 기록
+      console.log(`✅ ${breakoutData.ticker} 돌파 처리 완료 - 전략: ${entryStrategy.name}`);
+  }
+
+  // 돌파 후 진입 전략 결정
+  determineEntryStrategy(breakoutData) {
+      const currentPrice = breakoutData.currentPrice;
+      const entryPrice = breakoutData.entryPrice;
+      const breakoutGap = ((currentPrice - entryPrice) / entryPrice) * 100;
+      
+      if (breakoutGap <= 1.0) {
+          // 1% 이내 돌파: 즉시 진입
+          return {
+              name: '즉시 진입',
+              type: 'immediate',
+              entryPrice: currentPrice,
+              quantity: 1.0, // 100% 포지션
+              stopLoss: entryPrice * 0.98, // 진입가 -2%
+              confidence: 'high'
+          };
+      } else if (breakoutGap <= 2.5) {
+          // 1-2.5% 돌파: 분할 진입
+          return {
+              name: '분할 진입',
+              type: 'partial',
+              entryPrice: currentPrice,
+              quantity: 0.5, // 50% 포지션
+              stopLoss: entryPrice * 0.97, // 진입가 -3%
+              confidence: 'medium',
+              note: '풀백 시 추가 진입 대기'
+          };
+      } else if (breakoutGap <= 5.0) {
+          // 2.5-5% 돌파: 풀백 대기
+          return {
+              name: '풀백 대기',
+              type: 'pullback',
+              entryPrice: entryPrice * 1.01, // 진입가 +1% 되돌림 시
+              quantity: 0.75, // 75% 포지션
+              stopLoss: entryPrice * 0.95, // 진입가 -5%
+              confidence: 'medium',
+              note: `현재가 ${currentPrice.toFixed(2)}에서 ${(entryPrice * 1.01).toFixed(2)} 되돌림 대기`
+          };
+      } else {
+          // 5% 이상 돌파: 관망
+          return {
+              name: '관망',
+              type: 'observe',
+              entryPrice: null,
+              quantity: 0,
+              stopLoss: null,
+              confidence: 'low',
+              note: `돌파폭 ${breakoutGap.toFixed(1)}%로 과도한 추격 위험`
+          };
+      }
   }
 
   // 모의 주문 생성
-  createSimulatedOrder(breakoutData) {
-      const quantity = Math.floor(this.settings.riskAmount / 
-                      (breakoutData.entryPrice - breakoutData.stopLoss));
+  createSimulatedOrder(breakoutData, entryStrategy) {
+      if (entryStrategy.type === 'observe') {
+          // 관망 전략인 경우 주문 생성하지 않음
+          return null;
+      }
+      
+      const baseQuantity = Math.floor(this.settings.riskAmount / 
+                          (entryStrategy.entryPrice - entryStrategy.stopLoss));
+      const adjustedQuantity = Math.floor(baseQuantity * entryStrategy.quantity);
       
       return {
           ticker: breakoutData.ticker,
           action: 'BUY',
-          quantity: Math.max(1, quantity),
-          price: breakoutData.currentPrice,
-          entryPrice: breakoutData.entryPrice,
-          stopLoss: breakoutData.stopLoss,
+          quantity: Math.max(1, adjustedQuantity),
+          price: entryStrategy.entryPrice,
+          originalEntryPrice: breakoutData.entryPrice,
+          entryPrice: entryStrategy.entryPrice,
+          stopLoss: entryStrategy.stopLoss,
           target1: breakoutData.target1,
           target2: breakoutData.target2,
           timestamp: new Date(),
           status: 'SIMULATED',
-          riskAmount: this.settings.riskAmount
+          strategy: entryStrategy.name,
+          strategyType: entryStrategy.type,
+          confidence: entryStrategy.confidence,
+          note: entryStrategy.note || '',
+          riskAmount: this.settings.riskAmount * entryStrategy.quantity
       };
   }
 
@@ -650,14 +718,31 @@ class BreakoutTracker {
       console.log(`📢 상태: ${message}`);
   }
 
-  showBreakoutNotification(data) {
+  showBreakoutNotification(data, entryStrategy) {
       const notification = document.createElement('div');
       notification.className = 'breakout-notification';
+      
+      let strategyIcon = '';
+      let strategyColor = '';
+      
+      switch(entryStrategy.confidence) {
+          case 'high': strategyIcon = '🟢'; strategyColor = '#16a34a'; break;
+          case 'medium': strategyIcon = '🟡'; strategyColor = '#d97706'; break;
+          case 'low': strategyIcon = '🔴'; strategyColor = '#dc2626'; break;
+      }
+      
       notification.innerHTML = `
           <div class="notification-content">
               <h3>🚀 돌파 감지!</h3>
               <p><strong>${data.ticker}</strong>이 진입가를 돌파했습니다!</p>
               <p>현재가: $${data.currentPrice.toFixed(2)} (+${data.gain}%)</p>
+              <div style="margin: 10px 0; padding: 8px; background: rgba(0,0,0,0.05); border-radius: 6px;">
+                  <p><strong>${strategyIcon} 추천 전략: ${entryStrategy.name}</strong></p>
+                  <p style="font-size: 0.9em; color: ${strategyColor};">
+                      신뢰도: ${entryStrategy.confidence.toUpperCase()}
+                      ${entryStrategy.note ? `<br/>${entryStrategy.note}` : ''}
+                  </p>
+              </div>
               <button onclick="this.parentElement.parentElement.remove()">확인</button>
           </div>
       `;
@@ -668,7 +753,7 @@ class BreakoutTracker {
           if (notification.parentElement) {
               notification.remove();
           }
-      }, 10000);
+      }, 15000); // 전략 정보가 있으므로 15초로 연장
   }
 
   openStockChart(ticker) {

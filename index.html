@@ -60,22 +60,59 @@
         <!-- 네비게이션 바 -->
         <nav class="navigation-bar">
             <div class="nav-content">
-                <div class="main-controls">
-                    <button id="generateWatchListBtn" class="nav-btn primary" title="래리 윌리엄스 전략으로 돌파 대기 종목 선별">
-                        <span class="btn-icon">🔍</span>
-                        <span class="btn-text">워치리스트 생성</span>
-                    </button>
-                    <button id="trackingBtn" class="nav-btn success" title="실시간 돌파 추적">
-                        <span class="btn-icon">▶️</span>
-                        <span class="btn-text">추적 시작</span>
-                    </button>
-                    <button id="scanBtn" class="nav-btn secondary" title="전체 스캔 (기존 기능)">
-                        <span class="btn-icon">📊</span>
-                        <span class="btn-text">전체 스캔</span>
-                    </button>
+                <!-- 좌측 확장된 대시보드 -->
+                <div class="dashboard-area">
+                    <div class="main-dashboard">
+                        <h3 class="dashboard-title">📊 스캔 현황</h3>
+                        <div class="dashboard-grid">
+                            <div class="dashboard-stat">
+                                <div class="stat-icon">🚀</div>
+                                <div class="stat-info">
+                                    <span class="stat-number" id="breakoutCount">0</span>
+                                    <span class="stat-text">돌파 종목</span>
+                                </div>
+                            </div>
+                            <div class="dashboard-stat">
+                                <div class="stat-icon">⏰</div>
+                                <div class="stat-info">
+                                    <span class="stat-number" id="waitingCount">0</span>
+                                    <span class="stat-text">대기 종목</span>
+                                </div>
+                            </div>
+                            <div class="dashboard-stat">
+                                <div class="stat-icon">📈</div>
+                                <div class="stat-info">
+                                    <span class="stat-number" id="totalScanned">0</span>
+                                    <span class="stat-text">총 스캔</span>
+                                </div>
+                            </div>
+                            <div class="dashboard-stat">
+                                <div class="stat-icon">⚠️</div>
+                                <div class="stat-info">
+                                    <span class="stat-number" id="errorCount">0</span>
+                                    <span class="stat-text">오류</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="utility-controls">
+
+                <!-- 우측 컨트롤 영역 -->
+                <div class="control-area">
+                    <div class="scan-control-wrapper">
+                        <button id="scanBtn" class="main-scan-btn" title="래리 윌리엄스 변동성 돌파 전략으로 전체 스캔">
+                            <div class="btn-content">
+                                <span class="btn-icon">🚀</span>
+                                <div class="btn-text-area">
+                                    <span class="btn-title">스마트 스캔</span>
+                                    <span class="btn-subtitle">S&P 500 돌파 전략 분석</span>
+                                </div>
+                            </div>
+                        </button>
+                        <!-- 상태 표시 -->
+                        <div class="status" id="status">준비됨</div>
+                    </div>
+
                     <!-- 설정 드롭다운 메뉴 -->
                     <div class="settings-dropdown">
                         <button id="settingsDropdownBtn" class="nav-btn utility" title="설정 메뉴">
@@ -103,90 +140,23 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- 상태 표시 -->
-            <div class="status" id="status">준비됨</div>
         </nav>
 
-        <!-- 시장 상태 및 추적 현황 -->
-        <section class="tracking-section">
-            <h2>🎯 실시간 돌파 추적</h2>
-            
-            <div class="tracking-stats">
-                <div class="tracking-stat-card">
-                    <div class="tracking-stat-number" id="watchListCount">0</div>
-                    <div class="tracking-stat-label">워치리스트</div>
-                </div>
-                <div class="tracking-stat-card">
-                    <div class="tracking-stat-number" id="breakoutToday">0</div>
-                    <div class="tracking-stat-label">오늘 돌파</div>
-                </div>
-                <div class="tracking-stat-card">
-                    <div class="tracking-stat-number" id="lastCheckTime">--:--</div>
-                    <div class="tracking-stat-label">마지막 체크</div>
-                </div>
-                <div class="tracking-stat-card">
-                    <div class="tracking-stat-number" id="trackingStatus">추적 대기 중</div>
-                    <div class="tracking-stat-label">추적 상태</div>
-                </div>
-            </div>
-        </section>
-
-
-        <!-- 돌파 대기 워치리스트 -->
-        <section class="results-section">
-            <h2>⏰ 돌파 대기 워치리스트</h2>
-            <div id="watchListContainer" class="watch-list-grid">
-                <div class="no-results">워치리스트 생성 버튼을 클릭하여 돌파 대기 종목을 찾아보세요!</div>
-            </div>
-        </section>
-
-        <!-- 오늘의 돌파 종목 -->
-        <section class="results-section">
-            <h2>🚀 오늘의 돌파 종목</h2>
-            <div id="todayBreakouts" class="stock-grid">
-                <div class="no-results">아직 돌파한 종목이 없습니다.</div>
-            </div>
-        </section>
-
-        <!-- 요약 대시보드 -->
-        <section class="dashboard">
-            <div class="stat-card" title="조건을 만족하고 돌파한 종목 수">
-                <div class="stat-number" id="breakoutCount">0</div>
-                <div class="stat-label">실시간 돌파</div>
-            </div>
-            <div class="stat-card" title="조건을 만족하고 돌파를 기다리는 종목 수">
-                <div class="stat-number" id="waitingCount">0</div>
-                <div class="stat-label">돌파 대기</div>
-            </div>
-            <div class="stat-card" title="마지막 스캔에서 분석한 총 종목 수">
-                <div class="stat-number" id="totalScanned">0</div>
-                <div class="stat-label">총 스캔</div>
-            </div>
-            <div class="stat-card" title="스캔 에러 발생 종목 수">
-                <div class="stat-number" id="errorCount">0</div>
-                <div class="stat-label">스캔 오류</div>
-            </div>
-            <div class="stat-card" title="마지막 스캔 완료 시간">
-                <div class="stat-number" id="lastUpdate">Never</div>
-                <div class="stat-label">마지막 업데이트</div>
-            </div>
-        </section>
 
 
         <!-- 실시간 돌파 종목 -->
         <section class="results-section">
-            <h2>🚀 전체 스캔 - 실시간 돌파 종목</h2>
+            <h2>🚀 실시간 돌파 종목 (진입가 돌파 완료)</h2>
             <div id="breakoutStocks" class="stock-grid">
-                <div class="no-results">전체 스캔을 시작하여 돌파 종목을 찾아보세요!</div>
+                <div class="no-results">스마트 스캔을 시작하여 돌파 종목을 찾아보세요!</div>
             </div>
         </section>
 
         <!-- 돌파 대기 종목 -->
         <section class="results-section">
-            <h2>⏰ 전체 스캔 - 돌파 대기 종목</h2>
+            <h2>⏰ 돌파 대기 종목 (진입가 접근 중)</h2>
             <div id="waitingStocks" class="stock-grid">
-                <div class="no-results">전체 스캔을 시작하여 대기 종목을 찾아보세요!</div>
+                <div class="no-results">스마트 스캔을 시작하여 대기 종목을 찾아보세요!</div>
             </div>
         </section>
 
@@ -342,6 +312,31 @@
                 setTimeout(checkInitialization, 100);
             }
         };
+
+        // 스크롤 시 네비게이션 바 컴팩트 모드
+        let lastScrollTop = 0;
+        const navigationBar = document.querySelector('.navigation-bar');
+        
+        const handleScroll = () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            if (scrollTop > 50) {
+                navigationBar.classList.add('compact');
+            } else {
+                navigationBar.classList.remove('compact');
+            }
+            
+            lastScrollTop = scrollTop;
+        };
+        
+        // 스크롤 이벤트 리스너 추가 (throttle 적용)
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            if (scrollTimeout) {
+                cancelAnimationFrame(scrollTimeout);
+            }
+            scrollTimeout = requestAnimationFrame(handleScroll);
+        });
         
         // DOM 로드 후 확인 시작
         document.addEventListener('DOMContentLoaded', () => {
