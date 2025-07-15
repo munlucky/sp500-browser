@@ -182,4 +182,80 @@ class StorageManager {
             availableMB: ((5 * 1024 * 1024 - total) / 1024 / 1024).toFixed(2)
         };
     }
+    
+    // 어제 날짜 캐시 데이터 삭제
+    static clearYesterdayCache() {
+        try {
+            const today = new Date().toDateString();
+            const cache = this.getCache();
+            let deletedCount = 0;
+            
+            for (const key in cache) {
+                const cached = cache[key];
+                if (cached && cached.timestamp) {
+                    const cacheDate = new Date(cached.timestamp).toDateString();
+                    // 오늘이 아닌 날짜의 캐시는 모두 삭제 (어제 포함)
+                    if (cacheDate !== today) {
+                        delete cache[key];
+                        deletedCount++;
+                    }
+                }
+            }
+            
+            if (deletedCount > 0) {
+                localStorage.setItem(this.KEYS.CACHE, JSON.stringify(cache));
+                console.log(`🗑️ 어제 날짜 캐시 ${deletedCount}개 항목 삭제됨`);
+            }
+            
+            return deletedCount;
+        } catch (error) {
+            console.error('❌ 어제 캐시 삭제 실패:', error);
+            return 0;
+        }
+    }
+    
+    // 앱 시작 시 캐시 정리
+    static initializeCacheCleanup() {
+        try {
+            console.log('🧹 캐시 정리 시작...');
+            
+            // 1. 어제 날짜 캐시 삭제
+            const deletedCacheCount = this.clearYesterdayCache();
+            
+            // 2. 만료된 워치리스트 후보 삭제
+            const cachedWatchList = this.getCachedWatchListCandidates();
+            if (!cachedWatchList) {
+                console.log('🗑️ 만료된 워치리스트 후보 캐시 삭제됨');
+            }
+            
+            // 3. 일반 캐시에서 만료된 항목들 정리
+            const cache = this.getCache();
+            let expiredCount = 0;
+            
+            for (const key in cache) {
+                const cached = cache[key];
+                if (cached && cached.expireAt && Date.now() > cached.expireAt) {
+                    delete cache[key];
+                    expiredCount++;
+                }
+            }
+            
+            if (expiredCount > 0) {
+                localStorage.setItem(this.KEYS.CACHE, JSON.stringify(cache));
+                console.log(`🗑️ 만료된 캐시 ${expiredCount}개 항목 삭제됨`);
+            }
+            
+            const totalCleaned = deletedCacheCount + expiredCount;
+            if (totalCleaned > 0) {
+                console.log(`✅ 캐시 정리 완료: 총 ${totalCleaned}개 항목 삭제`);
+            } else {
+                console.log('✅ 캐시 정리 완료: 삭제할 항목 없음');
+            }
+            
+            return totalCleaned;
+        } catch (error) {
+            console.error('❌ 캐시 정리 실패:', error);
+            return 0;
+        }
+    }
 }

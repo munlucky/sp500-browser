@@ -127,8 +127,7 @@ class BrowserStockScanner {
         this.isScanning = true;
         this.updateStatus('스캔 중...', 'scanning');
         
-        // 프로그래스 팝업 표시
-        this.showProgressModal();
+        
         
         const results = {
             breakoutStocks: [],
@@ -144,8 +143,7 @@ class BrowserStockScanner {
             const totalTickers = this.sp500Tickers.length; // 모든 S&P 500 종목 스캔
             const failedTickers = []; // 실패한 항목들 저장
             
-            // 프로그래스 팝업 초기화
-            this.updateProgressModal(0, totalTickers, '-', 'scanning', results);
+            
             
             for (let i = 0; i < totalTickers; i++) {
                 const ticker = this.sp500Tickers[i];
@@ -153,9 +151,6 @@ class BrowserStockScanner {
                 let stock = null;
                 
                 this.updateStatus(`스캔 중... ${ticker} (${i + 1}/${totalTickers}) ${progress}%`, 'scanning');
-                
-                // 프로그래스 팝업 업데이트
-                this.updateProgressModal(i + 1, totalTickers, ticker, 'scanning', results);
                 
                 try {
                     stock = await this.analyzeStock(ticker, settings);
@@ -195,7 +190,7 @@ class BrowserStockScanner {
                     this.updateDashboard(results);
                 }
                 
-                // 딜레이 (API 제한 방지)
+                // 딜레이 (API 제한 방지) - 프로그래스 업데이트 후에 실행
                 await this.delay(this.demoMode ? 50 : 200);
             }
             
@@ -208,9 +203,6 @@ class BrowserStockScanner {
                     const progress = Math.round(((results.totalScanned + i + 1) / (totalTickers + failedTickers.length)) * 100);
                     
                     this.updateStatus(`재시도 중... ${ticker} (${results.totalScanned + i + 1}/${totalTickers + failedTickers.length}) ${progress}%`, 'scanning');
-                    
-                    // 프로그래스 팝업 업데이트 (재시도)
-                    this.updateProgressModal(results.totalScanned + i + 1, totalTickers + failedTickers.length, ticker, 'retrying', results);
                     
                     try {
                         const stock = await this.analyzeStock(ticker, settings);
@@ -236,7 +228,7 @@ class BrowserStockScanner {
                         this.updateDashboard(results);
                     }
                     
-                    // 딜레이 (API 제한 방지)
+                    // 딜레이 (API 제한 방지) - 프로그래스 업데이트 후에 실행
                     await this.delay(this.demoMode ? 50 : 200);
                 }
             }
@@ -267,22 +259,15 @@ class BrowserStockScanner {
                 window.logger.success(`스캔 완료: 총 ${results.totalScanned}개 종목 조회 완료`);
             }
             
-            // 프로그래스 팝업 완료 상태로 업데이트
-            this.updateProgressModal(results.totalScanned, results.totalScanned, '완료', 'completed', results);
+            
             
         } catch (error) {
             console.error('스캔 중 오류:', error);
             this.updateStatus('스캔 실패', 'error');
             
-            // 프로그래스 팝업 오류 상태로 업데이트
-            this.updateProgressModal(0, 0, '오류', 'error', results);
         } finally {
             this.isScanning = false;
             
-            // 3초 후 프로그래스 팝업 자동 닫기
-            setTimeout(() => {
-                this.hideProgressModal();
-            }, 3000);
         }
     }
 
@@ -293,8 +278,7 @@ class BrowserStockScanner {
         this.isScanning = true;
         this.updateStatus('스마트 스캔 중...', 'scanning');
         
-        // 프로그래스 팝업 표시
-        this.showProgressModal();
+        
         
         try {
             // 스마트 스캐너의 적응형 스캔 사용
@@ -332,15 +316,14 @@ class BrowserStockScanner {
                 window.logger.success(`스마트 스캔 완료: 총 ${formattedResults.totalScanned}개 종목 조회 완료`);
             }
             
-            // 프로그래스 팝업 완료 상태로 업데이트
-            this.updateProgressModal(formattedResults.totalScanned, formattedResults.totalScanned, '완료', 'completed', formattedResults);
+            // 진행 상황 최종 업데이트
+            this.updateProgressDisplay(formattedResults.totalScanned, formattedResults.totalScanned, '완료', 'completed', formattedResults);
+            
             
         } catch (error) {
             console.error('❌ 스마트 스캔 중 오류:', error);
             this.updateStatus('스마트 스캔 실패 - 기본 스캔으로 전환', 'error');
             
-            // 프로그래스 팝업 오류 상태로 업데이트
-            this.updateProgressModal(0, 0, '오류', 'error', {});
             
             // 에러 시 기본 스캔으로 폴백
             setTimeout(() => {
@@ -350,10 +333,6 @@ class BrowserStockScanner {
         } finally {
             this.isScanning = false;
             
-            // 3초 후 프로그래스 팝업 자동 닫기
-            setTimeout(() => {
-                this.hideProgressModal();
-            }, 3000);
         }
     }
 
@@ -632,6 +611,7 @@ class BrowserStockScanner {
         if (statusEl) {
             statusEl.textContent = message;
             statusEl.className = `status status-${type}`;
+            statusEl.style.display = 'block';
         }
         
         // 스캔 버튼 상태 업데이트
@@ -725,93 +705,7 @@ class BrowserStockScanner {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // 프로그래스 팝업 관련 메서드들
-    showProgressModal() {
-        const modal = document.getElementById('scanProgressModal');
-        if (modal) {
-            modal.classList.remove('hidden');
-        }
-    }
 
-    hideProgressModal() {
-        const modal = document.getElementById('scanProgressModal');
-        if (modal) {
-            modal.classList.add('hidden');
-        }
-    }
-
-    updateProgressModal(completed, total, currentTicker, status, results) {
-        const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
-        
-        // 진행률 업데이트
-        const progressElement = document.getElementById('scanProgress');
-        if (progressElement) {
-            progressElement.textContent = `${progressPercent}%`;
-        }
-        
-        // 프로그래스 바 업데이트
-        const progressFill = document.getElementById('progressFill');
-        if (progressFill) {
-            progressFill.style.width = `${progressPercent}%`;
-        }
-        
-        // 현재 종목 업데이트
-        const currentTickerElement = document.getElementById('currentTicker');
-        if (currentTickerElement) {
-            currentTickerElement.textContent = currentTicker;
-        }
-        
-        // 처리 완료 수 업데이트
-        const completedCountElement = document.getElementById('completedCount');
-        if (completedCountElement) {
-            completedCountElement.textContent = completed.toString();
-        }
-        
-        // 전체 종목 수 업데이트
-        const totalCountElement = document.getElementById('totalCount');
-        if (totalCountElement) {
-            totalCountElement.textContent = total.toString();
-        }
-        
-        // 결과 프리뷰 업데이트
-        const breakoutCountElement = document.getElementById('breakoutCount');
-        if (breakoutCountElement) {
-            breakoutCountElement.textContent = (results.breakoutStocks?.length || 0).toString();
-        }
-        
-        const waitingCountElement = document.getElementById('waitingCount');
-        if (waitingCountElement) {
-            waitingCountElement.textContent = (results.waitingStocks?.length || 0).toString();
-        }
-        
-        const errorCountElement = document.getElementById('errorCount');
-        if (errorCountElement) {
-            errorCountElement.textContent = (results.errors || 0).toString();
-        }
-        
-        // 상태 메시지 업데이트
-        const statusElement = document.getElementById('scanStatus');
-        if (statusElement) {
-            let statusMessage = '';
-            switch (status) {
-                case 'scanning':
-                    statusMessage = `스캔 중... (${progressPercent}%)`;
-                    break;
-                case 'retrying':
-                    statusMessage = `재시도 중... (${progressPercent}%)`;
-                    break;
-                case 'completed':
-                    statusMessage = `✅ 스캔 완료! (${results.breakoutStocks?.length || 0}개 돌파 발견)`;
-                    break;
-                case 'error':
-                    statusMessage = '❌ 스캔 중 오류가 발생했습니다.';
-                    break;
-                default:
-                    statusMessage = '준비 중...';
-            }
-            statusElement.textContent = statusMessage;
-        }
-    }
 
     // 데이터 파싱 메서드들
     parseWikipediaJSON(jsonText) {

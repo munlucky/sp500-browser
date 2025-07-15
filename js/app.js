@@ -13,6 +13,9 @@ class App {
             // 기본 상태 확인
             this.checkBrowserCompatibility();
             
+            // 캐시 정리 (어제 날짜 데이터 삭제)
+            StorageManager.initializeCacheCleanup();
+            
             // 스캐너 초기화
             this.scanner = await initScanner();
             
@@ -348,7 +351,8 @@ class App {
                     if (statusEl.textContent === message) {
                         statusEl.textContent = '준비됨';
                         statusEl.className = 'status';
-                        statusEl.style.display = 'none'; // "준비됨" 상태일 때는 숨김
+                        // "준비됨" 상태일 때도 계속 표시 (스캔 중일 수 있음)
+                        statusEl.style.display = 'block';
                     }
                 }, 3000);
             }

@@ -36,6 +36,8 @@ class BreakoutTracker {
       console.log('📋 래리 윌리엄스 돌파 대기 종목 선별 시작...');
       this.updateStatus('워치리스트 생성 중...', 'scanning');
       
+      
+      
       // 캐시된 데이터 제외하고 새로운 스캔 실행
       console.log('🔄 캐시된 항목을 제외하고 새로운 워치리스트 생성 시작...');
       
@@ -48,6 +50,9 @@ class BreakoutTracker {
           // S&P 500 종목들을 분석
           const tickers = stockScanner?.sp500Tickers || [];
           const totalTickers = tickers.length-1;
+          const failedTickers = []; // 실패한 종목들 저장
+          
+          
           
           for (let i = 0; i < totalTickers; i++) {
               const ticker = tickers[i];
@@ -59,11 +64,15 @@ class BreakoutTracker {
                   skippedCount++;
                   console.log(`⏭️ ${ticker} 캐시된 데이터 있음, 건너뜀`);
                   this.updateStatus(`워치리스트 생성 중... ${ticker} (캐시됨, 건너뜀) (${i + 1}/${totalTickers}) ${progress}%`, 'scanning');
+                  
+                  
                   continue;
               }
               
               scannedCount++;
               this.updateStatus(`워치리스트 생성 중... ${ticker} (새로 스캔) (${i + 1}/${totalTickers}) ${progress}%`, 'scanning');
+              
+              
               
               try {
                   // 캐시되지 않은 종목만 새로 데이터 가져오기
@@ -87,10 +96,49 @@ class BreakoutTracker {
                   
               } catch (error) {
                   console.warn(`❌ ${ticker} 분석 실패:`, error.message);
+                  // 실패한 종목을 재시도 목록에 추가
+                  failedTickers.push(ticker);
               }
               
               // API 제한 고려 딜레이
               await this.delay(stockScanner?.demoMode ? 50 : 200);
+          }
+          
+          // 실패한 종목들이 있으면 맨 뒤에 추가해서 재시도
+          if (failedTickers.length > 0) {
+              console.log(`🔄 실패한 ${failedTickers.length}개 항목을 재시도합니다...`);
+              
+              for (let i = 0; i < failedTickers.length; i++) {
+                  const ticker = failedTickers[i];
+                  const progress = Math.round(((scannedCount + i + 1) / (totalTickers + failedTickers.length)) * 100);
+                  
+                  this.updateStatus(`재시도 중... ${ticker} (${scannedCount + i + 1}/${totalTickers + failedTickers.length}) ${progress}%`, 'scanning');
+                  
+                  try {
+                      const yesterdayData = await this.getYesterdayData(ticker);
+                      if (yesterdayData) {
+                          const analysis = this.analyzeWatchListCandidate(yesterdayData, settings);
+                          
+                          if (analysis.isCandidate) {
+                              candidates.push({
+                                  ticker,
+                                  ...analysis,
+                                  addedAt: new Date(),
+                                  lastCheck: null,
+                                  hasBreakout: false,
+                                  currentPrice: null
+                              });
+                              
+                              console.log(`✅ ${ticker} 재시도 성공 - 워치리스트 추가 (점수: ${analysis.score})`);
+                          }
+                      }
+                  } catch (error) {
+                      console.warn(`❌ ${ticker} 재시도 실패:`, error.message);
+                  }
+                  
+                  // API 제한 고려 딜레이
+                  await this.delay(stockScanner?.demoMode ? 50 : 200);
+              }
           }
           
           // 점수 순으로 정렬하고 상위 30개만 선택
@@ -105,13 +153,24 @@ class BreakoutTracker {
           
           this.updateStatus(`워치리스트 생성 완료: ${topCandidates.length}개 종목 (새로 스캔: ${scannedCount}개, 캐시 건너뜀: ${skippedCount}개)`, 'completed');
           
+          
           console.log(`✅ 돌파 대기 워치리스트 생성 완료: ${topCandidates.length}개 종목 (새로 스캔: ${scannedCount}개, 캐시된 항목 건너뜀: ${skippedCount}개)`);
+          
+          // 워치리스트 생성 완료 후 총 조회수 로그
+          if (window.logger) {
+              window.logger.success(`워치리스트 생성 완료: 총 ${scannedCount}개 종목 새로 조회 (${skippedCount}개 캐시 건너뜀)`);
+          }
+          
+          
           return topCandidates;
           
       } catch (error) {
           console.error('❌ 워치리스트 생성 실패:', error);
           this.updateStatus('워치리스트 생성 실패', 'error');
+          
+          
           throw error;
+      } finally {
       }
   }
 
