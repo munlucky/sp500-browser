@@ -53,13 +53,20 @@ class StorageManager {
     
     static getDefaultSettings() {
         return {
+            // 스캔 필터 설정
             volatilityMin: 0.02,
-            volatilityMax: 0.08,
+            volatilityMax: 0.06,
             minVolume: 1000000,
             minPrice: 10,
             breakoutFactor: 0.6,
-            autoScan: false,
-            notifications: false
+            
+            // 자동 업데이트 설정
+            autoUpdateEnabled: true,
+            updateInterval: 60, // 초 단위
+            
+            // 시스템 설정
+            demoMode: false,
+            notificationEnabled: true
         };
     }
     

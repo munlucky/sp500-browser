@@ -122,11 +122,10 @@ class App {
         try {
             const settings = StorageManager.getSettings();
             
-            // 설정 UI 업데이트
+            // 스캔 필터 설정 UI 업데이트
             const volatilityRange = document.getElementById('volatilityRange');
             const volatilityValue = document.getElementById('volatilityValue');
             const minVolumeSelect = document.getElementById('minVolume');
-            const autoScanCheck = document.getElementById('autoScan');
             
             if (volatilityRange && volatilityValue) {
                 volatilityRange.value = settings.volatilityMax * 100;
@@ -141,14 +140,29 @@ class App {
             if (minVolumeSelect) {
                 minVolumeSelect.value = settings.minVolume;
             }
-            
-            if (autoScanCheck) {
-                autoScanCheck.checked = settings.autoScan;
-                
-                // 초기화 시 자동 스캔이 설정되어 있다면 시작
-                if (settings.autoScan && this.scanner) {
-                    this.scanner.startAutoScan();
-                }
+
+            // 자동 업데이트 설정 UI 업데이트
+            const autoUpdateEnabledCheck = document.getElementById('autoUpdateEnabled');
+            const updateIntervalSelect = document.getElementById('updateInterval');
+
+            if (autoUpdateEnabledCheck) {
+                autoUpdateEnabledCheck.checked = settings.autoUpdateEnabled;
+            }
+
+            if (updateIntervalSelect) {
+                updateIntervalSelect.value = settings.updateInterval;
+            }
+
+            // 시스템 설정 UI 업데이트
+            const demoModeCheck = document.getElementById('demoMode');
+            const notificationEnabledCheck = document.getElementById('notificationEnabled');
+
+            if (demoModeCheck) {
+                demoModeCheck.checked = settings.demoMode;
+            }
+
+            if (notificationEnabledCheck) {
+                notificationEnabledCheck.checked = settings.notificationEnabled;
             }
             
             console.log('✅ 설정 초기화 완료:', settings);
@@ -208,8 +222,13 @@ class App {
 
             // 메모리 정리용 이벤트
             window.addEventListener('beforeunload', () => {
-                if (this.scanner && this.scanner.autoScanInterval) {
-                    this.scanner.stopAutoScan();
+                if (this.scanner) {
+                    if (this.scanner.autoScanInterval) {
+                        this.scanner.stopAutoScan();
+                    }
+                    if (this.scanner.autoUpdateEnabled) {
+                        this.scanner.stopAutoUpdate();
+                    }
                 }
                 if (this.breakoutTracker && this.breakoutTracker.isTracking) {
                     this.breakoutTracker.stopRealTimeTracking();
@@ -235,10 +254,16 @@ class App {
                 offlineIndicator?.classList.remove('hidden');
                 console.log('📡 오프라인 상태');
                 
-                // 오프라인 시 자동 스캔 중지
-                if (this.scanner && this.scanner.autoScanInterval) {
-                    this.scanner.stopAutoScan();
-                    this.showStatus('오프라인 모드 - 자동 스캔 중지됨', 'error');
+                // 오프라인 시 자동 기능들 중지
+                if (this.scanner) {
+                    if (this.scanner.autoScanInterval) {
+                        this.scanner.stopAutoScan();
+                        this.showStatus('오프라인 모드 - 자동 스캔 중지됨', 'error');
+                    }
+                    if (this.scanner.autoUpdateEnabled) {
+                        this.scanner.stopAutoUpdate();
+                        this.showStatus('오프라인 모드 - 자동 업데이트 중지됨', 'error');
+                    }
                 }
                 
                 // 오프라인 시 돌파 추적 중지

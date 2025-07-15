@@ -49,75 +49,86 @@
 </head>
 <body>
     <div class="app">
-        <!-- 타이틀 헤더 -->
-        <header class="title-header">
-            <div class="title-content">
-                <h1>📈 S&P 500 실시간 돌파 스캐너</h1>
-                <p class="subtitle">래리 윌리엄스 변동성 돌파 전략 기반 자동 스캐닝</p>
-            </div>
-        </header>
-
-        <!-- 네비게이션 바 -->
-        <nav class="navigation-bar">
-            <div class="nav-content">
-                <!-- 좌측 확장된 대시보드 -->
-                <div class="dashboard-area">
-                    <div class="main-dashboard">
-                        <h3 class="dashboard-title">📊 스캔 현황</h3>
-                        <div class="dashboard-grid">
-                            <div class="dashboard-stat">
-                                <div class="stat-icon">🚀</div>
-                                <div class="stat-info">
-                                    <span class="stat-number" id="breakoutCount">0</span>
-                                    <span class="stat-text">돌파 종목</span>
-                                </div>
-                            </div>
-                            <div class="dashboard-stat">
-                                <div class="stat-icon">⏰</div>
-                                <div class="stat-info">
-                                    <span class="stat-number" id="waitingCount">0</span>
-                                    <span class="stat-text">대기 종목</span>
-                                </div>
-                            </div>
-                            <div class="dashboard-stat">
-                                <div class="stat-icon">📈</div>
-                                <div class="stat-info">
-                                    <span class="stat-number" id="totalScanned">0</span>
-                                    <span class="stat-text">총 스캔</span>
-                                </div>
-                            </div>
-                            <div class="dashboard-stat">
-                                <div class="stat-icon">⚠️</div>
-                                <div class="stat-info">
-                                    <span class="stat-number" id="errorCount">0</span>
-                                    <span class="stat-text">오류</span>
-                                </div>
-                            </div>
+        <!-- 메인 헤더 -->
+        <header class="main-header">
+            <div class="header-content">
+                <div class="brand-section">
+                    <div class="brand-icon">📈</div>
+                    <div class="brand-text">
+                        <h1 class="brand-title">S&P 500 실시간 스캐너</h1>
+                        <p class="brand-subtitle">래리 윌리엄스 변동성 돌파 전략</p>
+                    </div>
+                </div>
+                
+                <!-- 실시간 대시보드 -->
+                <div class="live-dashboard">
+                    <div class="dashboard-card breakout-card">
+                        <div class="card-icon">🚀</div>
+                        <div class="card-content">
+                            <span class="card-number" id="breakoutCount">0</span>
+                            <span class="card-label">돌파 종목</span>
+                        </div>
+                    </div>
+                    <div class="dashboard-card waiting-card">
+                        <div class="card-icon">⏰</div>
+                        <div class="card-content">
+                            <span class="card-number" id="waitingCount">0</span>
+                            <span class="card-label">대기 종목</span>
+                        </div>
+                    </div>
+                    <div class="dashboard-card scanned-card">
+                        <div class="card-icon">📊</div>
+                        <div class="card-content">
+                            <span class="card-number" id="totalScanned">0</span>
+                            <span class="card-label">총 스캔</span>
+                        </div>
+                    </div>
+                    <div class="dashboard-card error-card">
+                        <div class="card-icon">⚠️</div>
+                        <div class="card-content">
+                            <span class="card-number" id="errorCount">0</span>
+                            <span class="card-label">오류</span>
                         </div>
                     </div>
                 </div>
+            </div>
+        </header>
 
-                <!-- 우측 컨트롤 영역 -->
-                <div class="control-area">
-                    <div class="scan-control-wrapper">
-                        <button id="scanBtn" class="main-scan-btn" title="래리 윌리엄스 변동성 돌파 전략으로 전체 스캔">
-                            <div class="btn-content">
-                                <span class="btn-icon">🚀</span>
-                                <div class="btn-text-area">
-                                    <span class="btn-title">스마트 스캔</span>
-                                    <span class="btn-subtitle">S&P 500 돌파 전략 분석</span>
-                                </div>
+        <!-- 컨트롤 네비게이션 -->
+        <nav class="control-navigation">
+            <div class="control-container">
+                <!-- 메인 스캔 버튼 -->
+                <div class="primary-controls">
+                    <button id="scanBtn" class="primary-scan-btn" title="래리 윌리엄스 변동성 돌파 전략으로 전체 스캔">
+                        <div class="scan-btn-content">
+                            <span class="scan-icon">🚀</span>
+                            <div class="scan-text">
+                                <span class="scan-title">스마트 스캔 시작</span>
+                                <span class="scan-subtitle">S&P 500 돌파 전략 분석</span>
                             </div>
-                        </button>
-                        <!-- 상태 표시 -->
-                        <div class="status" id="status">준비됨</div>
-                    </div>
+                            <div class="scan-status" id="status">준비됨</div>
+                        </div>
+                    </button>
+                </div>
 
-                    <!-- 설정 드롭다운 메뉴 -->
+                <!-- 보조 컨트롤 -->
+                <div class="secondary-controls">
+                    <!-- 자동 업데이트 토글 -->
+                    <button id="autoUpdateToggleBtn" class="control-btn auto-update-btn" title="실시간 가격 자동 업데이트">
+                        <span class="ctrl-icon">⏸️</span>
+                        <div class="ctrl-content">
+                            <span class="ctrl-text">자동 업데이트</span>
+                            <span class="ctrl-status" id="autoUpdateStatus">중지됨</span>
+                            <span class="ctrl-timer" id="autoUpdateTimer"></span>
+                        </div>
+                        <div class="ctrl-progress" id="autoUpdateProgress"></div>
+                    </button>
+
+                    <!-- 설정 드롭다운 -->
                     <div class="settings-dropdown">
-                        <button id="settingsDropdownBtn" class="nav-btn utility" title="설정 메뉴">
-                            <span class="btn-icon">⚙️</span>
-                            <span class="btn-text">설정</span>
+                        <button id="settingsDropdownBtn" class="control-btn settings-btn" title="설정 메뉴">
+                            <span class="ctrl-icon">⚙️</span>
+                            <span class="ctrl-text">설정</span>
                         </button>
                         <div id="settingsDropdownMenu" class="settings-dropdown-menu hidden">
                             <button id="notificationBtn" class="dropdown-item" title="브라우저 알림 설정">
@@ -176,48 +187,64 @@
             </div>
             <div class="modal-body">
                 <div class="settings-grid">
-                    <div class="setting-item">
-                        <label for="volatilityRange">변동성 범위:</label>
-                        <input type="range" id="volatilityRange" min="2" max="10" value="6" step="0.5" 
-                               title="최대 변동성 한계 설정 (최소값은 항상 2%)">
-                        <span id="volatilityValue">2-6%</span>
-                    </div>
-                    <div class="setting-item">
-                        <label for="minVolume">최소 거래량:</label>
-                        <select id="minVolume" title="종목 필터링을 위한 최소 거래량">
-                            <option value="500000">50만주</option>
-                            <option value="1000000" selected>100만주</option>
-                            <option value="2000000">200만주</option>
-                            <option value="5000000">500만주</option>
-                        </select>
-                    </div>
-                    <div class="setting-item">
-                        <label for="autoScan">자동 스캔:</label>
-                        <div>
-                            <input type="checkbox" id="autoScan" title="5분마다 자동으로 스캔 실행">
-                            <span>5분마다 자동 실행</span>
+                    <!-- 스캔 필터 설정 -->
+                    <div class="setting-section">
+                        <h4>📊 스캔 필터 설정</h4>
+                        <div class="setting-item">
+                            <label for="volatilityRange">변동성 범위:</label>
+                            <input type="range" id="volatilityRange" min="2" max="10" value="6" step="0.5" 
+                                   title="스캔할 종목의 최대 변동성 한계 설정">
+                            <span id="volatilityValue">2-6%</span>
+                        </div>
+                        <div class="setting-item">
+                            <label for="minVolume">최소 거래량:</label>
+                            <select id="minVolume" title="종목 필터링을 위한 최소 거래량">
+                                <option value="500000">50만주</option>
+                                <option value="1000000" selected>100만주</option>
+                                <option value="2000000">200만주</option>
+                                <option value="5000000">500만주</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="setting-item">
-                        <label>스캔 모드:</label>
-                        <div>
-                            <input type="checkbox" id="demoMode" title="데모 데이터 사용 (실제 API 키 없이 테스트)">
-                            <span>데모 모드 (테스트용)</span>
+
+                    <!-- 자동 업데이트 설정 -->
+                    <div class="setting-section">
+                        <h4>🔄 자동 업데이트 설정</h4>
+                        <div class="setting-item">
+                            <label for="autoUpdateEnabled">자동 업데이트:</label>
+                            <div>
+                                <input type="checkbox" id="autoUpdateEnabled" title="스캔 완료 후 자동으로 가격 업데이트 시작">
+                                <span>스캔 후 자동 시작</span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label for="updateInterval">업데이트 주기:</label>
+                            <select id="updateInterval" title="자동 업데이트 간격 설정">
+                                <option value="30">30초</option>
+                                <option value="60" selected>1분</option>
+                                <option value="120">2분</option>
+                                <option value="300">5분</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="setting-item">
-                        <label for="trackingInterval">추적 주기:</label>
-                        <select id="trackingInterval">
-                            <option value="15">15초</option>
-                            <option value="30" selected>30초</option>
-                            <option value="60">1분</option>
-                            <option value="300">5분</option>
-                        </select>
-                    </div>
-                    <div class="setting-item">
-                        <label for="riskAmount">리스크 금액:</label>
-                        <input type="number" id="riskAmount" value="1000" min="100" step="100">
-                        <span>$ (주문 수량 계산용)</span>
+
+                    <!-- 시스템 설정 -->
+                    <div class="setting-section">
+                        <h4>⚙️ 시스템 설정</h4>
+                        <div class="setting-item">
+                            <label>스캔 모드:</label>
+                            <div>
+                                <input type="checkbox" id="demoMode" title="데모 데이터 사용 (실제 API 키 없이 테스트)">
+                                <span>데모 모드 (테스트용)</span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label for="notificationEnabled">브라우저 알림:</label>
+                            <div>
+                                <input type="checkbox" id="notificationEnabled" title="돌파 발생 시 브라우저 알림 표시">
+                                <span>돌파 시 알림</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -313,17 +340,17 @@
             }
         };
 
-        // 스크롤 시 네비게이션 바 컴팩트 모드
+        // 스크롤 시 컨트롤 네비게이션 컴팩트 모드
         let lastScrollTop = 0;
-        const navigationBar = document.querySelector('.navigation-bar');
+        const controlNavigation = document.querySelector('.control-navigation');
         
         const handleScroll = () => {
             const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
             
             if (scrollTop > 50) {
-                navigationBar.classList.add('compact');
+                controlNavigation?.classList.add('compact');
             } else {
-                navigationBar.classList.remove('compact');
+                controlNavigation?.classList.remove('compact');
             }
             
             lastScrollTop = scrollTop;

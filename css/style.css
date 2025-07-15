@@ -17,53 +17,121 @@ body {
   padding: 20px;
 }
 
-/* 타이틀 헤더 */
-.title-header {
+/* 메인 헤더 */
+.main-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 2rem 0;
-  margin-bottom: 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   position: relative;
   overflow: hidden;
 }
 
-.title-header::before {
+.main-header::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20"><defs><pattern id="grain" width="100" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.03)"/></pattern></defs><rect width="100%" height="100%" fill="url(%23grain)"/></svg>');
-  opacity: 0.3;
+  background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
+  pointer-events: none;
 }
 
-.title-content {
+.header-content {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
   position: relative;
   z-index: 1;
 }
 
-.title-header h1 {
-  font-size: 2.5rem;
-  margin: 0 0 0.5rem 0;
-  font-weight: 700;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+/* 브랜드 섹션 */
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-.subtitle {
-  font-size: 1.1rem;
+.brand-icon {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.brand-title {
+  font-size: 1.8rem;
   margin: 0;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  line-height: 1.2;
+}
+
+.brand-subtitle {
+  font-size: 0.9rem;
+  margin: 0.2rem 0 0 0;
   opacity: 0.9;
   font-weight: 400;
 }
 
-/* 네비게이션 바 */
-.navigation-bar {
+/* 실시간 대시보드 */
+.live-dashboard {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  min-width: 0;
+}
+
+.dashboard-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  min-width: 0;
+}
+
+.dashboard-card:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.card-icon {
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.card-number {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.card-label {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  font-weight: 500;
+  line-height: 1;
+  margin-top: 0.1rem;
+}
+
+/* 컨트롤 네비게이션 */
+.control-navigation {
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(15px);
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
@@ -76,576 +144,724 @@ body {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 스크롤 시 컴팩트 모드 */
-.navigation-bar.compact {
-  padding: 0.3rem 0;
-  margin-bottom: 0;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.15);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-}
-
-.nav-content {
+.control-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
   justify-content: space-between;
-  align-items: stretch;
+  align-items: center;
   gap: 2rem;
-  min-height: 120px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 컴팩트 모드에서 nav-content */
-.navigation-bar.compact .nav-content {
-  min-height: 50px;
-  gap: 0.5rem;
-  padding: 0 15px;
+/* PC 화면에서 컨트롤 컨테이너 최적화 */
+@media (min-width: 1024px) {
+  .control-container {
+    gap: 3rem;
+    padding: 0 30px;
+    align-items: flex-start;
+  }
 }
 
-/* 좌측 대시보드 영역 */
-.dashboard-area {
-  flex: 2;
-  display: flex;
-  align-items: center;
+@media (min-width: 1440px) {
+  .control-container {
+    max-width: 1400px;
+    gap: 4rem;
+    padding: 0 40px;
+  }
 }
 
-.main-dashboard {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(15px);
-  border-radius: 20px;
-  padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+@media (min-width: 1920px) {
+  .control-container {
+    max-width: 1600px;
+    gap: 5rem;
+    padding: 0 50px;
+  }
 }
 
-.dashboard-title {
-  margin: 0 0 1rem 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #334155;
-  text-align: center;
-  transition: all 0.3s ease;
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  transition: all 0.3s ease;
-}
-
-/* 컴팩트 모드에서 대시보드 */
-.navigation-bar.compact .main-dashboard {
-  padding: 0.5rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-}
-
-.navigation-bar.compact .dashboard-title {
-  display: none; /* 컴팩트 모드에서는 제목 숨김 */
-}
-
-.navigation-bar.compact .dashboard-grid {
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.4rem;
-}
-
-.dashboard-stat {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-}
-
-/* 컴팩트 모드에서 통계 카드 */
-.navigation-bar.compact .dashboard-stat {
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.3rem;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.4);
-  border: none;
-}
-
-.dashboard-stat:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-/* 컴팩트 모드에서는 호버 효과 비활성화 */
-.navigation-bar.compact .dashboard-stat:hover {
-  transform: none;
-  box-shadow: none;
-}
-
-.stat-icon {
-  font-size: 1.5rem;
-  line-height: 1;
-  transition: all 0.3s ease;
-}
-
-.stat-info {
+/* 메인 컨트롤 */
+.primary-controls {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-}
-
-.stat-number {
-  font-size: 1.4rem;
-  font-weight: 700;
-  line-height: 1;
-  transition: all 0.3s ease;
-}
-
-.stat-text {
-  font-size: 0.8rem;
-  color: #64748b;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: all 0.3s ease;
-}
-
-/* 컴팩트 모드에서 텍스트 크기 조정 */
-.navigation-bar.compact .stat-icon {
-  font-size: 0.9rem;
-}
-
-.navigation-bar.compact .stat-number {
-  font-size: 0.85rem;
-  font-weight: 800;
-}
-
-.navigation-bar.compact .stat-text {
-  font-size: 0.55rem;
-  text-align: center;
-  opacity: 0.8;
-}
-
-/* 색상 테마 */
-.dashboard-stat:nth-child(1) .stat-number { color: #dc2626; } /* 돌파 - 빨강 */
-.dashboard-stat:nth-child(2) .stat-number { color: #d97706; } /* 대기 - 주황 */
-.dashboard-stat:nth-child(3) .stat-number { color: #059669; } /* 총스캔 - 초록 */
-.dashboard-stat:nth-child(4) .stat-number { color: #7c3aed; } /* 오류 - 보라 */
-
-/* 우측 컨트롤 영역 */
-.control-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-}
-
-.scan-control-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.3s ease;
-}
-
-/* 컴팩트 모드에서 스캔 컨트롤 */
-.navigation-bar.compact .scan-control-wrapper {
-  gap: 0.2rem;
-  flex-direction: row;
-  align-items: center;
-}
-
-/* 컴팩트 모드에서 컨트롤 영역 */
-.navigation-bar.compact .control-area {
   gap: 0.5rem;
 }
 
-/* 컴팩트 모드에서 설정 버튼 */
-.navigation-bar.compact .nav-btn {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.75rem;
-  border-radius: 8px;
+/* PC 화면에서 메인 컨트롤 최적화 */
+@media (min-width: 1024px) {
+  .primary-controls {
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
 }
 
-.navigation-bar.compact .nav-btn .btn-icon {
-  font-size: 1rem;
+@media (min-width: 1440px) {
+  .primary-controls {
+    gap: 1rem;
+  }
 }
 
-.navigation-bar.compact .nav-btn .btn-text {
-  font-size: 0.7rem;
-}
-
-.scan-control-wrapper .status {
-  padding: 0.3rem 0.8rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  background: rgba(0, 0, 0, 0.05);
-  color: #64748b;
-  text-align: center;
-  min-width: 100px;
-  transition: all 0.3s ease;
-}
-
-/* 컴팩트 모드에서 상태 표시 */
-.navigation-bar.compact .scan-control-wrapper .status {
-  padding: 0.2rem 0.5rem;
-  border-radius: 8px;
-  font-size: 0.65rem;
-  min-width: 60px;
-  white-space: nowrap;
-}
-
-/* 애니메이션 효과 */
-.stat-number.updated {
-  animation: statPulse 0.6s ease-out;
-}
-
-@keyframes statPulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-
-.main-scan-btn {
+.primary-scan-btn {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   border: none;
   border-radius: 16px;
-  color: white;
+  padding: 1rem 1.5rem;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
   box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
-  padding: 0;
-  overflow: hidden;
+  min-width: 200px;
   position: relative;
+  overflow: hidden;
 }
 
-/* 컴팩트 모드에서 버튼 */
-.navigation-bar.compact .main-scan-btn {
-  border-radius: 8px;
-  box-shadow: 0 1px 8px rgba(102, 126, 234, 0.3);
-  transform: scale(0.85);
+/* PC 화면 최적화 */
+@media (min-width: 1024px) {
+  .primary-scan-btn {
+    min-width: 280px;
+    padding: 1.25rem 2rem;
+    border-radius: 20px;
+    box-shadow: 0 6px 30px rgba(102, 126, 234, 0.25);
+  }
+  
+  .scan-btn-content {
+    gap: 1rem;
+  }
+  
+  .scan-icon {
+    font-size: 1.8rem;
+  }
+  
+  .scan-title {
+    font-size: 1.1rem;
+  }
+  
+  .scan-subtitle {
+    font-size: 0.8rem;
+  }
+  
+  .scan-status {
+    font-size: 0.85rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 8px;
+  }
 }
 
-.main-scan-btn:hover {
+/* 대형 PC 화면 (1440px+) */
+@media (min-width: 1440px) {
+  .primary-scan-btn {
+    min-width: 320px;
+    padding: 1.5rem 2.5rem;
+    border-radius: 24px;
+  }
+  
+  .scan-btn-content {
+    gap: 1.25rem;
+  }
+  
+  .scan-icon {
+    font-size: 2rem;
+  }
+  
+  .scan-title {
+    font-size: 1.2rem;
+  }
+  
+  .scan-subtitle {
+    font-size: 0.85rem;
+  }
+  
+  .scan-status {
+    font-size: 0.9rem;
+    padding: 0.4rem 1rem;
+  }
+}
+
+/* 초대형 화면 (1920px+) */
+@media (min-width: 1920px) {
+  .primary-scan-btn {
+    min-width: 360px;
+    padding: 1.75rem 3rem;
+  }
+  
+  .scan-icon {
+    font-size: 2.2rem;
+  }
+  
+  .scan-title {
+    font-size: 1.3rem;
+  }
+  
+  .scan-subtitle {
+    font-size: 0.9rem;
+  }
+}
+
+.primary-scan-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
 }
 
-.main-scan-btn:active {
+/* PC 화면에서 향상된 호버 효과 */
+@media (min-width: 1024px) {
+  .primary-scan-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 35px rgba(102, 126, 234, 0.45);
+  }
+  
+  .primary-scan-btn:hover .scan-icon {
+    transform: scale(1.1) rotate(5deg);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+  
+  .primary-scan-btn:hover::before {
+    opacity: 1;
+  }
+}
+
+/* 버튼 내부 글로우 효과 */
+.primary-scan-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%, rgba(255,255,255,0.1) 100%);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.primary-scan-btn:active {
   transform: translateY(0);
 }
 
-.main-scan-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn-content {
+.scan-btn-content {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 2rem;
-  position: relative;
-  z-index: 1;
-  transition: all 0.3s ease;
+  gap: 0.75rem;
 }
 
-.btn-icon {
+.scan-icon {
   font-size: 1.5rem;
-  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
   transition: all 0.3s ease;
+  z-index: 1;
+  position: relative;
 }
 
-.btn-text-area {
+.scan-text {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.2rem;
+  gap: 0.1rem;
 }
 
-.btn-title {
-  font-size: 1.1rem;
+.scan-title {
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1;
-  transition: all 0.3s ease;
 }
 
-.btn-subtitle {
-  font-size: 0.8rem;
+.scan-subtitle {
+  font-size: 0.75rem;
   opacity: 0.9;
   font-weight: 400;
   line-height: 1;
-  transition: all 0.3s ease;
 }
 
-/* 컴팩트 모드에서 버튼 내용 */
-.navigation-bar.compact .btn-content {
-  padding: 0.4rem 1rem;
-  gap: 0.4rem;
-}
-
-.navigation-bar.compact .btn-icon {
-  font-size: 1rem;
-}
-
-.navigation-bar.compact .btn-title {
+.scan-status {
   font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  background: rgba(100, 116, 139, 0.1);
+  border-radius: 6px;
+  align-self: flex-start;
 }
 
-.navigation-bar.compact .btn-subtitle {
-  font-size: 0.6rem;
-  opacity: 0.7;
-}
-
-.main-controls {
+/* 보조 컨트롤 */
+.secondary-controls {
   display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.utility-controls {
-  display: flex;
-  gap: 1rem;
   align-items: center;
+  gap: 1rem;
+}
+
+.control-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  min-width: 120px;
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.ctrl-icon {
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+.ctrl-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.ctrl-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1;
+}
+
+.ctrl-status {
+  font-size: 0.7rem;
+  color: #6b7280;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.ctrl-timer {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  font-weight: 400;
+  line-height: 1;
+  margin-top: 0.1rem;
+}
+
+.ctrl-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #10b981, #059669);
+  border-radius: 1px;
+  transition: width 1s linear;
+  opacity: 0;
+}
+
+/* 자동 업데이트 버튼 활성 상태 */
+.auto-update-btn.active {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #059669;
+}
+
+.auto-update-btn.active .ctrl-icon {
+  opacity: 1;
+}
+
+.auto-update-btn.active .ctrl-progress {
+  opacity: 1;
+}
+
+/* 설정 드롭다운 */
+.settings-dropdown {
+  position: relative;
+}
+
+.settings-btn {
+  min-width: 100px;
+}
+
+.settings-dropdown.active .settings-btn {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.settings-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  min-width: 180px;
+  overflow: hidden;
+  z-index: 1000;
+  transform: translateY(-8px);
+  opacity: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.settings-dropdown-menu:not(.hidden) {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 0.85rem;
+  color: #374151;
+}
+
+.dropdown-item:hover {
+  background: rgba(102, 126, 234, 0.08);
+  color: #667eea;
+}
+
+.dropdown-item:first-child {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.dropdown-item:last-child {
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.dropdown-icon {
+  font-size: 1rem;
+  opacity: 0.8;
 }
 
 /* 반응형 디자인 */
 @media (max-width: 768px) {
-  .nav-content {
+  .header-content {
     flex-direction: column;
     gap: 1rem;
-    min-height: auto;
+    text-align: center;
   }
   
-  /* 모바일에서 컴팩트 모드 */
-  .navigation-bar.compact .nav-content {
-    min-height: 45px;
-    gap: 0.5rem;
-    padding: 0 10px;
-  }
-  
-  .dashboard-area {
-    width: 100%;
-    order: 2;
-  }
-  
-  .main-dashboard {
-    padding: 1rem;
-  }
-  
-  /* 모바일 컴팩트 모드에서 대시보드 */
-  .navigation-bar.compact .main-dashboard {
-    padding: 0.3rem;
-  }
-  
-  .dashboard-grid {
+  .live-dashboard {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
+    width: 100%;
   }
   
-  /* 모바일 컴팩트 모드에서 그리드 */
-  .navigation-bar.compact .dashboard-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.25rem;
-  }
-  
-  .dashboard-stat {
+  .dashboard-card {
     padding: 0.5rem;
-    gap: 0.5rem;
   }
   
-  /* 모바일 컴팩트 모드에서 통계 카드 */
-  .navigation-bar.compact .dashboard-stat {
-    padding: 0.2rem;
-    gap: 0.1rem;
+  .brand-title {
+    font-size: 1.4rem;
   }
   
-  .stat-icon {
-    font-size: 1.2rem;
-  }
-  
-  .stat-number {
-    font-size: 1.2rem;
-  }
-  
-  .stat-text {
-    font-size: 0.7rem;
-  }
-  
-  /* 모바일 컴팩트 모드에서 텍스트 */
-  .navigation-bar.compact .stat-icon {
+  .brand-subtitle {
     font-size: 0.8rem;
   }
   
-  .navigation-bar.compact .stat-number {
-    font-size: 0.75rem;
+  .control-container {
+    flex-direction: column;
+    gap: 1rem;
   }
   
-  .navigation-bar.compact .stat-text {
-    font-size: 0.5rem;
-  }
-  
-  .control-area {
+  .secondary-controls {
+    flex-direction: column;
     width: 100%;
-    order: 1;
     gap: 0.75rem;
   }
   
-  .scan-control-wrapper {
-    width: 100%;
-    max-width: 300px;
+  .control-btn {
+    justify-content: center;
+    min-width: 200px;
   }
   
-  .main-scan-btn {
-    width: 100%;
+  .settings-dropdown-menu {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
   }
   
-  .btn-content {
-    padding: 0.8rem 1.5rem;
-    gap: 0.8rem;
-  }
-  
-  /* 모바일 컴팩트 모드에서 버튼 */
-  .navigation-bar.compact .btn-content {
-    padding: 0.3rem 0.8rem;
-    gap: 0.3rem;
-  }
-  
-  .btn-icon {
-    font-size: 1.3rem;
-  }
-  
-  .btn-title {
-    font-size: 1rem;
-  }
-  
-  .btn-subtitle {
-    font-size: 0.75rem;
-  }
-  
-  /* 모바일 컴팩트 모드에서 버튼 텍스트 */
-  .navigation-bar.compact .btn-icon {
-    font-size: 0.9rem;
-  }
-  
-  .navigation-bar.compact .btn-title {
-    font-size: 0.7rem;
-  }
-  
-  .navigation-bar.compact .btn-subtitle {
-    font-size: 0.55rem;
+  .settings-dropdown-menu:not(.hidden) {
+    transform: translateX(-50%) translateY(0);
   }
 }
 
 @media (max-width: 480px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
+  .main-header {
+    padding: 1rem 0;
   }
   
-  .dashboard-stat {
-    justify-content: center;
+  .header-content {
+    padding: 0 15px;
+  }
+  
+  .live-dashboard {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  
+  .dashboard-card {
+    padding: 0.4rem;
+    gap: 0.3rem;
+  }
+  
+  .card-icon {
+    font-size: 1rem;
+  }
+  
+  .card-number {
+    font-size: 1rem;
+  }
+  
+  .card-label {
+    font-size: 0.65rem;
+  }
+  
+  .brand-title {
+    font-size: 1.2rem;
+  }
+  
+  .brand-subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .control-navigation {
+    padding: 0.75rem 0;
+  }
+  
+  .primary-scan-btn {
+    padding: 0.75rem 1rem;
+    min-width: 180px;
+  }
+  
+  .scan-icon {
+    font-size: 1.2rem;
+  }
+  
+  .scan-title {
+    font-size: 0.9rem;
+  }
+  
+  .scan-subtitle {
+    font-size: 0.7rem;
   }
 }
 
-/* 기존 버튼 스타일 */
-.nav-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border: none;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  text-decoration: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+/* 애니메이션 및 상태 클래스 */
+.scanning .primary-scan-btn {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  animation: pulse 2s infinite;
 }
 
-.nav-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+.scanning .scan-icon {
+  animation: rotate 2s linear infinite;
 }
 
-.nav-btn:active {
-  transform: translateY(-1px);
+/* PC 화면에서 스캔 중 애니메이션 향상 */
+@media (min-width: 1024px) {
+  .scanning .primary-scan-btn {
+    animation: pulseLarge 2s infinite;
+    box-shadow: 0 8px 40px rgba(245, 158, 11, 0.4);
+  }
+  
+  .scanning .scan-icon {
+    animation: rotateLarge 2s linear infinite;
+  }
+  
+  @keyframes pulseLarge {
+    0%, 100% { 
+      transform: scale(1);
+      box-shadow: 0 8px 40px rgba(245, 158, 11, 0.4);
+    }
+    50% { 
+      transform: scale(1.03);
+      box-shadow: 0 12px 50px rgba(245, 158, 11, 0.6);
+    }
+  }
+  
+  @keyframes rotateLarge {
+    from { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.1); }
+    to { transform: rotate(360deg) scale(1); }
+  }
 }
 
-.btn-icon {
-  font-size: 1.1em;
-  display: flex;
-  align-items: center;
-}
-
-.btn-text {
-  white-space: nowrap;
-}
-
-/* 버튼 색상 변형 */
-.nav-btn.primary {
-  background: linear-gradient(135deg, #3b82f6, #1e40af);
-  color: white;
-}
-
-.nav-btn.primary:hover {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-}
-
-.nav-btn.success {
-  background: linear-gradient(135deg, #10b981, #047857);
-  color: white;
-}
-
-.nav-btn.success:hover {
-  background: linear-gradient(135deg, #059669, #065f46);
-}
-
-.nav-btn.secondary {
-  background: linear-gradient(135deg, #6366f1, #4338ca);
-  color: white;
-}
-
-.nav-btn.secondary:hover {
-  background: linear-gradient(135deg, #5b21b6, #4c1d95);
-}
-
-.nav-btn.utility {
-  background: linear-gradient(135deg, #6b7280, #4b5563);
-  color: white;
-}
-
-.nav-btn.utility:hover {
-  background: linear-gradient(135deg, #4b5563, #374151);
-}
-
-/* 비활성화된 버튼 스타일 */
-.nav-btn:disabled {
-  background: linear-gradient(135deg, #94a3b8, #64748b) !important;
+.primary-scan-btn:disabled {
+  opacity: 0.7;
   cursor: not-allowed;
   transform: none !important;
-  box-shadow: none !important;
-  opacity: 0.7;
 }
 
-/* 추적 버튼 활성 상태 */
-.nav-btn.success.tracking {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
 }
 
-.nav-btn.success.tracking:hover {
-  background: linear-gradient(135deg, #b91c1c, #991b1b);
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
+
+/* 대시보드 카드 업데이트 애니메이션 */
+.dashboard-card.updated,
+.dashboard-card .updated {
+  animation: cardUpdate 0.6s ease-out;
+}
+
+.card-number.updated {
+  animation: numberUpdate 0.8s ease-out;
+}
+
+@keyframes cardUpdate {
+  0% { background: rgba(16, 185, 129, 0.3); transform: scale(1.05); }
+  100% { background: rgba(255, 255, 255, 0.15); transform: scale(1); }
+}
+
+@keyframes numberUpdate {
+  0% { 
+    color: #10b981; 
+    transform: scale(1.2);
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  }
+  100% { 
+    color: inherit; 
+    transform: scale(1);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+}
+
+/* 스크롤 시 컴팩트 모드 */
+.control-navigation.compact {
+  padding: 0.5rem 0;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.control-navigation.compact .primary-scan-btn {
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+}
+
+.control-navigation.compact .scan-title {
+  font-size: 0.9rem;
+}
+
+.control-navigation.compact .scan-subtitle {
+  font-size: 0.7rem;
+}
+
+/* 접근성 개선 */
+.control-btn:focus,
+.primary-scan-btn:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+/* 다크 모드 지원 (미래 확장용) */
+@media (prefers-color-scheme: dark) {
+  .control-navigation {
+    background: rgba(31, 41, 55, 0.98);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .control-btn {
+    background: rgba(55, 65, 81, 0.9);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #f9fafb;
+  }
+  
+  .ctrl-text {
+    color: #f9fafb;
+  }
+  
+  .ctrl-status {
+    color: #d1d5db;
+  }
+  
+  .ctrl-timer {
+    color: #9ca3af;
+  }
+  
+  .scan-status {
+    background: rgba(75, 85, 99, 0.3);
+    color: #d1d5db;
+  }
+  
+  .dropdown-item {
+    color: #f9fafb;
+  }
+  
+  .settings-dropdown-menu {
+    background: #374151;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* 자동 업데이트 버튼 활성화 상태 */
+.auto-update-btn.active {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.auto-update-btn.active .ctrl-icon,
+.auto-update-btn.active .ctrl-text,
+.auto-update-btn.active .ctrl-status,
+.auto-update-btn.active .ctrl-timer {
+  color: white;
+}
+
+.auto-update-btn.active .ctrl-progress {
+  opacity: 1;
+}
+
+
+/* 자동 업데이트 애니메이션 */
+.current-price.updated {
+  animation: priceUpdate 0.6s ease-out;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+@keyframes priceUpdate {
+  0% { 
+    transform: scale(1); 
+    background: rgba(34, 197, 94, 0.3);
+  }
+  50% { 
+    transform: scale(1.05); 
+    background: rgba(34, 197, 94, 0.2);
+  }
+  100% { 
+    transform: scale(1); 
+    background: rgba(34, 197, 94, 0.1);
+  }
+}
+
+/* 알림 애니메이션 */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+
+
 
 .status {
   padding: 8px 16px;
@@ -1118,32 +1334,6 @@ body {
     font-size: 0.95rem;
   }
   
-  /* 네비게이션 모바일 */
-  .navigation-bar {
-    padding: 0.75rem 0;
-  }
-  
-  .nav-content {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-  }
-  
-  .main-controls {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-  
-  .utility-controls {
-    justify-content: center;
-  }
-  
-  .nav-btn {
-    justify-content: center;
-    padding: 1rem 1.5rem;
-    font-size: 1rem;
-  }
   
   /* 대시보드 모바일 */
   .dashboard {
@@ -1195,9 +1385,6 @@ body {
     grid-template-columns: 1fr;
   }
   
-  .nav-btn {
-    padding: 0.875rem 1.25rem;
-  }
 }
 
 /* 다크 모드 지원 (선택사항) */
@@ -1778,5 +1965,38 @@ body {
     background: rgba(59, 130, 246, 0.2);
     color: #60a5fa;
   }
+}
+
+/* 설정 모달 섹션 스타일 */
+.setting-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(59, 130, 246, 0.03);
+  border: 1px solid rgba(59, 130, 246, 0.1);
+  border-radius: 12px;
+}
+
+.setting-section h4 {
+  margin: 0 0 1rem 0;
+  color: #1e40af;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.setting-section .setting-item {
+  margin-bottom: 1rem;
+}
+
+.setting-section .setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 

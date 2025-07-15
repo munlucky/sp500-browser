@@ -5,12 +5,35 @@ class BrowserStockScanner {
         this.isScanning = false;
         this.sp500Tickers = [];
         this.demoMode = false; // 실제 API 사용
+        this.autoUpdateTimeout = null;
+        this.autoUpdateEnabled = false;
+        this.isAutoUpdating = false; // 업데이트 실행 중 플래그
+        this.lastScanResults = null;
+        this.progressInterval = null;
+        this.lastUpdateTime = null;
+        this.updateIntervalMs = 60000; // 기본 1분
     }
 
     async init() {
         console.log('🚀 스캐너 초기화 중...');
         await this.loadSP500Tickers();
+        this.loadSettings();
         this.bindEvents();
+        
+        // 초기 UI 상태 설정
+        this.updateAutoUpdateButtonUI();
+    }
+
+    // 설정 로드
+    loadSettings() {
+        const settings = StorageManager.getSettings();
+        this.demoMode = settings.demoMode;
+        this.updateIntervalMs = settings.updateInterval * 1000;
+        console.log('📋 설정 로드됨:', {
+            demoMode: this.demoMode,
+            updateInterval: settings.updateInterval + '초',
+            autoUpdateEnabled: settings.autoUpdateEnabled
+        });
     }
 
     async loadSP500Tickers() {
@@ -510,6 +533,9 @@ class BrowserStockScanner {
     }
 
     displayResults(results) {
+        // 결과 저장 (자동 업데이트용)
+        this.lastScanResults = results;
+        
         // 대시보드 업데이트
         this.updateDashboard(results);
         
@@ -518,6 +544,12 @@ class BrowserStockScanner {
         
         // 대기 종목 표시
         this.renderStockCards('waitingStocks', results.waitingStocks, 'waiting');
+        
+        // 스캔 완료 후 자동 업데이트 시작 (설정에서 활성화된 경우)
+        const settings = StorageManager.getSettings();
+        if (!this.autoUpdateEnabled && settings.autoUpdateEnabled) {
+            this.startAutoUpdate();
+        }
     }
 
     updateDashboard(results) {
@@ -724,6 +756,14 @@ class BrowserStockScanner {
             });
         }
         
+        // 자동 업데이트 토글 버튼
+        const autoUpdateToggleBtn = document.getElementById('autoUpdateToggleBtn');
+        if (autoUpdateToggleBtn) {
+            autoUpdateToggleBtn.addEventListener('click', () => {
+                this.toggleAutoUpdate();
+            });
+        }
+
         // 자동 스캔 설정
         const autoScanCheck = document.getElementById('autoScan');
         if (autoScanCheck) {
@@ -761,7 +801,47 @@ class BrowserStockScanner {
         if (demoModeCheck) {
             demoModeCheck.addEventListener('change', (e) => {
                 this.demoMode = e.target.checked;
+                StorageManager.updateSettings({ demoMode: e.target.checked });
                 console.log(`데모 모드: ${this.demoMode ? 'ON' : 'OFF'}`);
+            });
+        }
+
+        // 자동 업데이트 설정
+        const autoUpdateEnabledCheck = document.getElementById('autoUpdateEnabled');
+        if (autoUpdateEnabledCheck) {
+            autoUpdateEnabledCheck.addEventListener('change', (e) => {
+                StorageManager.updateSettings({ autoUpdateEnabled: e.target.checked });
+                console.log(`자동 업데이트 기본 활성화: ${e.target.checked ? 'ON' : 'OFF'}`);
+            });
+        }
+
+        const updateIntervalSelect = document.getElementById('updateInterval');
+        if (updateIntervalSelect) {
+            updateIntervalSelect.addEventListener('change', (e) => {
+                const interval = parseInt(e.target.value);
+                StorageManager.updateSettings({ updateInterval: interval });
+                console.log(`업데이트 주기: ${interval}초`);
+                
+                // 업데이트 간격 즉시 적용
+                this.updateIntervalMs = interval * 1000;
+                
+                // 현재 자동 업데이트가 실행 중이면 재시작
+                if (this.autoUpdateEnabled) {
+                    this.stopAutoUpdate();
+                    setTimeout(() => {
+                        this.startAutoUpdate();
+                    }, 500); // 500ms 후 재시작
+                }
+            });
+        }
+
+
+        // 브라우저 알림 설정
+        const notificationEnabledCheck = document.getElementById('notificationEnabled');
+        if (notificationEnabledCheck) {
+            notificationEnabledCheck.addEventListener('change', (e) => {
+                StorageManager.updateSettings({ notificationEnabled: e.target.checked });
+                console.log(`브라우저 알림: ${e.target.checked ? 'ON' : 'OFF'}`);
             });
         }
     }
@@ -787,7 +867,452 @@ class BrowserStockScanner {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    // 자동 업데이트 시작 (업데이트 완료 후 설정된 간격만큼 대기)
+    startAutoUpdate() {
+        if (this.autoUpdateEnabled) {
+            console.log('⚠️ 자동 업데이트가 이미 실행 중입니다.');
+            return;
+        }
+        
+        this.autoUpdateEnabled = true;
+        
+        // 기존 스케줄 정리
+        if (this.autoUpdateTimeout) {
+            clearTimeout(this.autoUpdateTimeout);
+            this.autoUpdateTimeout = null;
+        }
+        
+        // 첫 번째 업데이트는 즉시 실행
+        this.scheduleNextUpdate(true);
+        
+        console.log(`🔄 자동 업데이트 시작됨 (${this.updateIntervalMs/1000}초 간격)`);
+        this.updateAutoUpdateButtonUI();
+    }
 
+    // 다음 업데이트 스케줄링
+    scheduleNextUpdate(immediate = false) {
+        if (!this.autoUpdateEnabled) return;
+        
+        // 이미 스케줄된 업데이트가 있으면 취소
+        if (this.autoUpdateTimeout) {
+            clearTimeout(this.autoUpdateTimeout);
+            this.autoUpdateTimeout = null;
+        }
+        
+        if (immediate) {
+            // 즉시 실행 (첫 번째 업데이트)
+            this.executeUpdate();
+        } else {
+            // 대기 시간 후 실행 - 진행 표시기 시작
+            this.startProgressIndicator();
+            
+            this.autoUpdateTimeout = setTimeout(() => {
+                if (!this.autoUpdateEnabled) return;
+                this.executeUpdate();
+            }, this.updateIntervalMs);
+            
+            console.log(`⏰ 다음 자동 업데이트가 ${this.updateIntervalMs/1000}초 후 스케줄됨`);
+        }
+    }
+
+    // 업데이트 실행
+    async executeUpdate() {
+        if (!this.autoUpdateEnabled) return;
+        
+        // 이미 업데이트가 실행 중이면 건너뛰기
+        if (this.isAutoUpdating) {
+            console.warn('⚠️ 자동 업데이트가 이미 실행 중입니다. 건너뜁니다.');
+            // 다음 업데이트 스케줄링 (중복 방지)
+            this.scheduleNextUpdate();
+            return;
+        }
+        
+        // 업데이트 실행 상태 설정
+        this.isAutoUpdating = true;
+        
+        // 진행 표시기 중지 (업데이트 시작)
+        this.stopProgressIndicator();
+        
+        // 업데이트 중 상태 표시
+        const timerEl = document.getElementById('autoUpdateTimer');
+        if (timerEl) {
+            timerEl.textContent = '업데이트 중...';
+        }
+        
+        try {
+            console.log('🔄 자동 업데이트 실행 시작...');
+            await this.performAutoUpdate();
+            console.log('✅ 자동 업데이트 실행 완료');
+        } catch (error) {
+            console.error('❌ 자동 업데이트 실행 중 오류:', error);
+        } finally {
+            // 업데이트 완료 상태로 복원
+            this.isAutoUpdating = false;
+        }
+        
+        // 업데이트 완료 후 다음 업데이트 스케줄링
+        this.scheduleNextUpdate();
+    }
+
+    // 자동 업데이트 중지
+    stopAutoUpdate() {
+        if (this.autoUpdateEnabled) {
+            this.autoUpdateEnabled = false;
+            
+            // 스케줄된 업데이트 취소
+            if (this.autoUpdateTimeout) {
+                clearTimeout(this.autoUpdateTimeout);
+                this.autoUpdateTimeout = null;
+            }
+            
+            // 진행 표시기 중지
+            this.stopProgressIndicator();
+            
+            // API Manager의 대기 중인 요청들도 취소
+            if (window.apiManager) {
+                const wasActive = window.apiManager.isActive();
+                if (wasActive) {
+                    console.log('🛑 API Manager 요청 취소 중...');
+                    window.apiManager.cancelAllRequests();
+                }
+            }
+            
+            // 실행 중인 업데이트가 있다면 완료될 때까지 기다리도록 플래그만 설정
+            // (실제 업데이트 작업은 완료될 때까지 진행됨)
+            if (this.isAutoUpdating) {
+                console.log('⏹️ 자동 업데이트 중지 요청됨 (현재 실행 중인 업데이트는 완료 후 중지)');
+            } else {
+                console.log('⏹️ 자동 업데이트 중지됨');
+            }
+            
+            this.updateAutoUpdateButtonUI();
+        }
+    }
+
+    // 자동 업데이트 토글
+    toggleAutoUpdate() {
+        if (this.autoUpdateEnabled) {
+            this.stopAutoUpdate();
+        } else {
+            // 스캔 결과가 있을 때만 자동 업데이트 시작 가능
+            if (this.lastScanResults && 
+                (this.lastScanResults.breakoutStocks.length > 0 || this.lastScanResults.waitingStocks.length > 0)) {
+                this.startAutoUpdate();
+            } else {
+                console.warn('⚠️ 스캔 결과가 없어 자동 업데이트를 시작할 수 없습니다. 먼저 스캔을 실행하세요.');
+                this.updateStatus('스캔 결과가 없습니다. 먼저 스캔을 실행하세요.', 'error');
+            }
+        }
+    }
+
+    // 백그라운드에서 기존 종목들의 현재가 업데이트 (모든 종목을 동적으로 조회)
+    async performAutoUpdate() {
+        // 기본 조건 확인
+        if (!this.lastScanResults || this.isScanning) return;
+        
+        // 자동 업데이트가 비활성화되었으면 중단
+        if (!this.autoUpdateEnabled) {
+            console.log('⏹️ 자동 업데이트가 비활성화되어 중단됨');
+            return;
+        }
+
+        console.log('🔄 자동 업데이트 실행 중...');
+        
+        try {
+            const allStocks = [
+                ...this.lastScanResults.breakoutStocks,
+                ...this.lastScanResults.waitingStocks
+            ];
+
+            if (allStocks.length === 0) return;
+
+            let updatedCount = 0;
+            let successCount = 0;
+            let failedCount = 0;
+
+            // 모든 종목을 동적으로 업데이트 (랜덤 선택 없이)
+            console.log(`📈 ${allStocks.length}개 종목 전체 업데이트 시작...`);
+
+            for (const stock of allStocks) {
+                // 업데이트 중 중지 요청이 있으면 즉시 중단
+                if (!this.autoUpdateEnabled) {
+                    console.log('⏹️ 자동 업데이트 중지 요청으로 인한 조기 종료');
+                    break;
+                }
+                
+                try {
+                    if (this.demoMode) {
+                        // 데모 모드: 랜덤 변동 시뮬레이션
+                        const volatility = Math.random() * 0.04 - 0.02; // ±2%
+                        stock.currentPrice = Math.max(0.01, stock.currentPrice * (1 + volatility));
+                        successCount++;
+                    } else {
+                        // 실제 모드: API에서 현재가 가져오기
+                        const newPrice = await this.getCurrentPriceOnly(stock.ticker);
+                        if (newPrice && newPrice > 0) {
+                            stock.currentPrice = newPrice;
+                            stock.lastUpdated = new Date();
+                            successCount++;
+                            console.log(`✅ ${stock.ticker}: $${newPrice.toFixed(2)}`);
+                        } else {
+                            failedCount++;
+                            console.warn(`❌ ${stock.ticker}: 가격 조회 실패`);
+                        }
+                    }
+                    
+                    updatedCount++;
+                    
+                    // API 제한 고려하여 적절한 지연
+                    if (!this.demoMode) {
+                        await this.delay(200); // 200ms 지연으로 API 부하 방지
+                    }
+                    
+                } catch (error) {
+                    failedCount++;
+                    console.warn(`❌ ${stock.ticker} 업데이트 실패:`, error.message);
+                }
+            }
+
+            // 업데이트된 결과로 UI 갱신
+            this.updateStockStatus();
+            this.updateDashboard(this.lastScanResults);
+
+            console.log(`✅ 자동 업데이트 완료: 전체 ${updatedCount}개, 성공 ${successCount}개, 실패 ${failedCount}개`);
+            
+            // 마지막 업데이트 시간 기록
+            this.lastUpdateTime = new Date();
+
+        } catch (error) {
+            console.error('❌ 자동 업데이트 실패:', error);
+        }
+    }
+
+    // 현재가만 가져오는 메서드 (전체 스캔과 동일한 API 사용)
+    async getCurrentPriceOnly(ticker) {
+        try {
+            if (this.demoMode) {
+                // 데모 모드에서는 랜덤 가격 반환
+                return 50 + Math.random() * 100;
+            }
+
+            // 전체 스캔과 동일한 API Manager 사용
+            if (window.apiManager) {
+                const stockData = await window.apiManager.queueRequest(ticker);
+                
+                if (stockData && stockData.currentPrice) {
+                    return stockData.currentPrice;
+                }
+            }
+            
+            // API Manager가 실패한 경우 fetchStockData 사용 (백업)
+            const fullData = await this.fetchStockData(ticker);
+            if (fullData && fullData.currentPrice) {
+                return fullData.currentPrice;
+            }
+            
+        } catch (error) {
+            console.warn(`❌ ${ticker} 현재가 조회 실패:`, error.message);
+        }
+        return null;
+    }
+
+    // 돌파/대기 상태 재평가
+    updateStockStatus() {
+        if (!this.lastScanResults) return;
+
+        let statusChanged = false;
+
+        // 대기 종목 중 돌파한 것이 있는지 확인
+        const stillWaiting = [];
+        for (const stock of this.lastScanResults.waitingStocks) {
+            if (stock.currentPrice >= stock.entryPrice) {
+                // 돌파 발생!
+                this.lastScanResults.breakoutStocks.push(stock);
+                statusChanged = true;
+                console.log(`🚀 새로운 돌파: ${stock.ticker} $${stock.currentPrice.toFixed(2)}`);
+                
+                // 브라우저 알림 (가능한 경우)
+                this.showBreakoutNotification(stock);
+            } else {
+                stillWaiting.push(stock);
+            }
+        }
+
+        this.lastScanResults.waitingStocks = stillWaiting;
+
+        if (statusChanged) {
+            // 상태가 변경된 경우에만 UI 전체 갱신
+            this.renderStockCards('breakoutStocks', this.lastScanResults.breakoutStocks, 'breakout');
+            this.renderStockCards('waitingStocks', this.lastScanResults.waitingStocks, 'waiting');
+        } else {
+            // 상태 변경이 없는 경우 가격만 업데이트
+            this.updateExistingCards();
+        }
+    }
+
+    // 기존 카드들의 가격만 업데이트
+    updateExistingCards() {
+        // 돌파 종목 가격 업데이트
+        const breakoutContainer = document.getElementById('breakoutStocks');
+        if (breakoutContainer) {
+            const cards = breakoutContainer.querySelectorAll('.stock-card');
+            cards.forEach((card, index) => {
+                if (this.lastScanResults.breakoutStocks[index]) {
+                    const stock = this.lastScanResults.breakoutStocks[index];
+                    const priceEl = card.querySelector('.current-price');
+                    if (priceEl) {
+                        priceEl.textContent = `$${stock.currentPrice.toFixed(2)}`;
+                        priceEl.classList.add('updated');
+                        setTimeout(() => priceEl.classList.remove('updated'), 600);
+                    }
+                }
+            });
+        }
+
+        // 대기 종목 가격 업데이트
+        const waitingContainer = document.getElementById('waitingStocks');
+        if (waitingContainer) {
+            const cards = waitingContainer.querySelectorAll('.stock-card');
+            cards.forEach((card, index) => {
+                if (this.lastScanResults.waitingStocks[index]) {
+                    const stock = this.lastScanResults.waitingStocks[index];
+                    const priceEl = card.querySelector('.current-price');
+                    if (priceEl) {
+                        priceEl.textContent = `$${stock.currentPrice.toFixed(2)}`;
+                        priceEl.classList.add('updated');
+                        setTimeout(() => priceEl.classList.remove('updated'), 600);
+                    }
+
+                    // 진입가까지 남은 금액 업데이트
+                    const gapEl = card.querySelector('.gap');
+                    if (gapEl && stock.currentPrice < stock.entryPrice) {
+                        const gap = stock.entryPrice - stock.currentPrice;
+                        gapEl.textContent = `돌파까지: $${gap.toFixed(2)}`;
+                    }
+                }
+            });
+        }
+    }
+
+    // 돌파 알림 표시
+    showBreakoutNotification(stock) {
+        const settings = StorageManager.getSettings();
+        
+        // 브라우저 알림 (설정에서 활성화된 경우만)
+        if (settings.notificationEnabled && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification(`🚀 돌파 감지: ${stock.ticker}`, {
+                body: `현재가: $${stock.currentPrice.toFixed(2)}\n진입가: $${stock.entryPrice.toFixed(2)}`,
+                icon: '/favicon.ico'
+            });
+        }
+
+        // 화면 알림도 표시
+        const notification = document.createElement('div');
+        notification.className = 'auto-update-notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                <h4>🚀 실시간 돌파 감지!</h4>
+                <p><strong>${stock.ticker}</strong>이 진입가를 돌파했습니다!</p>
+                <p>현재가: $${stock.currentPrice.toFixed(2)} (진입가: $${stock.entryPrice.toFixed(2)})</p>
+                <button onclick="this.parentElement.parentElement.remove()">확인</button>
+            </div>
+        `;
+        
+        // 간단한 스타일링
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-width: 300px;
+            animation: slideInRight 0.3s ease;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // 10초 후 자동 제거
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 10000);
+    }
+
+    // 자동 업데이트 버튼 UI 업데이트
+    updateAutoUpdateButtonUI() {
+        const autoUpdateBtn = document.getElementById('autoUpdateToggleBtn');
+        if (!autoUpdateBtn) return;
+
+        const iconEl = autoUpdateBtn.querySelector('.btn-icon');
+        const statusEl = autoUpdateBtn.querySelector('.auto-update-status');
+        const timerEl = autoUpdateBtn.querySelector('.auto-update-timer');
+
+        if (this.autoUpdateEnabled) {
+            // 활성화 상태
+            autoUpdateBtn.classList.add('active');
+            if (iconEl) iconEl.textContent = '▶️';
+            if (statusEl) statusEl.textContent = '실행 중';
+            if (timerEl) timerEl.style.display = 'block';
+            autoUpdateBtn.title = '자동 업데이트 실행 중 (1분마다) - 클릭하여 중지';
+        } else {
+            // 비활성화 상태
+            autoUpdateBtn.classList.remove('active');
+            if (iconEl) iconEl.textContent = '⏸️';
+            if (statusEl) statusEl.textContent = '중지됨';
+            if (timerEl) {
+                timerEl.style.display = 'none';
+                timerEl.textContent = '';
+            }
+            autoUpdateBtn.title = '실시간 가격 자동 업데이트 (1분마다) - 클릭하여 시작';
+        }
+    }
+
+    // 진행 표시기 시작
+    startProgressIndicator() {
+        const progressEl = document.getElementById('autoUpdateProgress');
+        const timerEl = document.getElementById('autoUpdateTimer');
+        
+        if (!progressEl || !timerEl) return;
+        
+        // 진행 표시기 초기화
+        progressEl.style.width = '0%';
+        
+        let secondsElapsed = 0;
+        const totalSeconds = this.updateIntervalMs / 1000; // 설정된 간격 사용
+
+        this.progressInterval = setInterval(() => {
+            secondsElapsed++;
+            const progress = (secondsElapsed / totalSeconds) * 100;
+            
+            progressEl.style.width = `${progress}%`;
+            
+            const remaining = totalSeconds - secondsElapsed;
+            if (remaining > 0) {
+                timerEl.textContent = `${remaining}초 후 업데이트`;
+            } else {
+                // 시간이 다 되면 진행 표시기 정지 (executeUpdate에서 처리됨)
+                this.stopProgressIndicator();
+            }
+        }, 1000);
+    }
+
+    // 진행 표시기 중지
+    stopProgressIndicator() {
+        if (this.progressInterval) {
+            clearInterval(this.progressInterval);
+            this.progressInterval = null;
+        }
+        
+        const progressEl = document.getElementById('autoUpdateProgress');
+        if (progressEl) {
+            progressEl.style.width = '0%';
+        }
+    }
 
     // 데이터 파싱 메서드들
     parseWikipediaJSON(jsonText) {

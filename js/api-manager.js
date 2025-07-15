@@ -542,6 +542,66 @@ class APIManager {
             summary: report.summary
         };
     }
+
+    /**
+     * 모든 대기 중인 요청을 취소
+     */
+    cancelAllRequests() {
+        console.log('🛑 API Manager: 모든 대기 중인 요청 취소');
+        
+        // 대기 중인 요청들을 모두 거부로 해결
+        while (this.requestQueue.length > 0) {
+            const { ticker, reject } = this.requestQueue.shift();
+            if (reject) {
+                reject(new Error('Request cancelled by user'));
+            }
+        }
+        
+        // 재시도 큐도 비우기
+        this.retryQueue = [];
+        
+        // 처리 중인 요청 목록 초기화
+        this.pendingRequests.clear();
+        
+        // 처리 상태 리셋
+        this.isProcessingQueue = false;
+        
+        console.log('✅ API Manager: 모든 요청이 취소되었습니다');
+    }
+
+    /**
+     * 특정 ticker의 요청만 취소
+     */
+    cancelRequest(ticker) {
+        // 큐에서 해당 ticker 제거
+        const initialLength = this.requestQueue.length;
+        this.requestQueue = this.requestQueue.filter(item => {
+            if (item.ticker === ticker) {
+                if (item.reject) {
+                    item.reject(new Error(`Request for ${ticker} cancelled`));
+                }
+                return false;
+            }
+            return true;
+        });
+        
+        // 처리 중인 요청에서도 제거
+        this.pendingRequests.delete(ticker);
+        
+        const cancelledCount = initialLength - this.requestQueue.length;
+        if (cancelledCount > 0) {
+            console.log(`🛑 API Manager: ${ticker} 요청 ${cancelledCount}개 취소됨`);
+        }
+        
+        return cancelledCount;
+    }
+
+    /**
+     * API Manager 상태 확인
+     */
+    isActive() {
+        return this.isProcessingQueue || this.requestQueue.length > 0 || this.pendingRequests.size > 0;
+    }
 }
 
 // 전역 인스턴스
