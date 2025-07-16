@@ -56,37 +56,37 @@ class SmartScanner {
         const isMarketHours = currentHour >= 9 && currentHour < 16;
         
         // 장시간 여부에 따른 전략 조정
-        if (!isMarketHours) {
-            return {
-                strategy: 'priority',
-                batchSize: this.batchSizes.demo,
-                delayMs: 15000,
-                description: '장외시간 - 우선순위 종목만 스캔'
-            };
-        }
+        // if (!isMarketHours) {
+        //     return {
+        //         strategy: 'priority',
+        //         batchSize: this.batchSizes.demo,
+        //         delayMs: 15000,
+        //         description: '장외시간 - 우선순위 종목만 스캔'
+        //     };
+        // }
         
-        // API 키 가용성에 따른 전략
-        if (apiStatus.availableKeys === 0) {
-            return {
-                strategy: 'demo',
-                batchSize: 0,
-                delayMs: 0,
-                description: 'API 제한 도달 - 데모 모드 권장'
-            };
-        }
+        // // API 키 가용성에 따른 전략
+        // if (apiStatus.availableKeys === 0) {
+        //     return {
+        //         strategy: 'demo',
+        //         batchSize: 0,
+        //         delayMs: 0,
+        //         description: 'API 제한 도달 - 데모 모드 권장'
+        //     };
+        // }
         
-        if (apiStatus.availableKeys === 1) {
-            return {
-                strategy: 'priority',
-                batchSize: this.batchSizes.demo,
-                delayMs: 12000,
-                description: '제한적 API - 우선순위 종목 중심'
-            };
-        }
+        // if (apiStatus.availableKeys === 1) {
+        //     return {
+        //         strategy: 'priority',
+        //         batchSize: this.batchSizes.demo,
+        //         delayMs: 12000,
+        //         description: '제한적 API - 우선순위 종목 중심'
+        //     };
+        // }
         
         return {
             strategy: 'hybrid',
-            batchSize: this.batchSizes.free,
+            batchSize: this.batchSizes.premium,
             delayMs: 5000,
             description: '충분한 API - 혼합 스캔 전략'
         };
@@ -173,26 +173,30 @@ class SmartScanner {
             
             console.log(`📦 배치 ${batchIndex + 1}/${totalBatches} 처리 중... (${batchTickers.length}개 종목)`);
             
-            // 배치 내에서 병렬 처리 (제한적)
-            const batchPromises = batchTickers.map(async (ticker, index) => {
+            // 순차적 처리로 변경 (429 에러 방지)
+            const batchResults = [];
+            for (let i = 0; i < batchTickers.length; i++) {
+                const ticker = batchTickers[i];
                 try {
-                    // 배치 내 순차 딜레이 (Yahoo Finance는 빠르므로 단축)
-                    await this.delay(index * 500);
+                    // 각 요청 간 1초 딜레이
+                    if (i > 0) {
+                        await this.delay(1000);
+                    }
                     
                     const stockData = await window.stockScanner.fetchStockData(ticker);
                     
                     if (stockData) {
-                        return await window.stockScanner.analyzeStock(ticker, settings, stockData);
+                        const result = await window.stockScanner.analyzeStock(ticker, settings, stockData);
+                        batchResults.push({ status: 'fulfilled', value: result });
+                    } else {
+                        batchResults.push({ status: 'fulfilled', value: null });
                     }
                 } catch (error) {
                     console.warn(`❌ ${ticker} 스캔 실패:`, error);
                     results.errors++;
+                    batchResults.push({ status: 'rejected', reason: error });
                 }
-                
-                return null;
-            });
-            
-            const batchResults = await Promise.allSettled(batchPromises);
+            }
             
             // 결과 처리
             batchResults.forEach((result) => {
@@ -262,26 +266,27 @@ class SmartScanner {
      */
     async adaptiveScan(allTickers) {
         const strategy = await this.determineOptimalStrategy();
-        console.log(`🧠 적응형 스캔: ${strategy.description}`);
+        await this.scanInBatches(allTickers, strategy.batchSize);
+        // console.log(`🧠 적응형 스캔: ${strategy.description}`);
         
-        switch (strategy.strategy) {
-            case 'priority':
-                return await this.scanPriorityStocks();
+        // switch (strategy.strategy) {
+        //     case 'priority':
+        //         return await this.scanPriorityStocks();
                 
-            case 'batch':
-                return await this.scanInBatches(allTickers, strategy.batchSize);
+        //     case 'batch':
+        //         return await this.scanInBatches(allTickers, strategy.batchSize);
                 
-            case 'hybrid':
-                return await this.hybridScan(allTickers);
+        //     case 'hybrid':
+        //         return await this.hybridScan(allTickers);
                 
-            case 'demo':
-                console.log('🎭 데모 모드로 전환합니다.');
-                window.stockScanner.demoMode = true;
-                return await window.stockScanner.scanStocks();
+        //     case 'demo':
+        //         console.log('🎭 데모 모드로 전환합니다.');
+        //         window.stockScanner.demoMode = true;
+        //         return await window.stockScanner.scanStocks();
                 
-            default:
-                return await this.scanPriorityStocks();
-        }
+        //     default:
+        //         return await this.scanPriorityStocks();
+        // }
     }
 
     /**

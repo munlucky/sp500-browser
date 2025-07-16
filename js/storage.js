@@ -65,7 +65,7 @@ class StorageManager {
             updateInterval: 60, // 초 단위
             
             // 시스템 설정
-            demoMode: false,
+            demoMode: true,
             notificationEnabled: true
         };
     }

@@ -409,6 +409,39 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+/* 재확인 버튼 스타일 */
+.recheck-btn {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.recheck-btn:hover {
+  background: linear-gradient(135deg, #ff5252 0%, #ff3f34 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+}
+
+.recheck-btn .ctrl-icon {
+  font-size: 16px;
+}
+
+.recheck-btn .ctrl-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.recheck-btn .ctrl-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.recheck-btn .ctrl-subtitle {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
 .ctrl-icon {
   font-size: 1rem;
   opacity: 0.8;
@@ -1998,5 +2031,396 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+
+/* ================================
+   Phase 4: UI 컴포넌트 스타일
+   ================================ */
+
+/* 대시보드 컴포넌트 애니메이션 */
+.dashboard-card.updating {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
+
+.dashboard-card.updated {
+  animation: pulse-success 0.6s ease;
+}
+
+@keyframes pulse-success {
+  0% { box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); }
+  50% { 
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), 
+                0 0 20px rgba(34, 197, 94, 0.4);
+    transform: scale(1.02);
+  }
+  100% { box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); }
+}
+
+.dashboard-card.has-data {
+  border-left: 4px solid #22c55e;
+}
+
+.dashboard-card.no-data {
+  opacity: 0.7;
+}
+
+.dashboard-card.has-errors {
+  border-left: 4px solid #ef4444;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.dashboard-card.highlight {
+  animation: highlight-glow 2s ease;
+}
+
+@keyframes highlight-glow {
+  0%, 100% { box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); }
+  50% { 
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), 
+                0 0 30px rgba(59, 130, 246, 0.5);
+  }
+}
+
+.live-dashboard.scanning::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #06b6d4);
+  width: var(--scan-progress, 0%);
+  transition: width 0.3s ease;
+  border-radius: 0 0 8px 8px;
+}
+
+/* 설정 컴포넌트 개선 */
+.modal-body .settings-grid {
+  gap: 1.5rem;
+}
+
+.setting-item label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.setting-item input[type="range"] {
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
+.setting-item input[type="checkbox"] {
+  margin-right: 0.5rem;
+  scale: 1.2;
+}
+
+.setting-item select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+}
+
+.setting-item div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#saveSettingsBtn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+#saveSettingsBtn:hover {
+  background: #2563eb;
+}
+
+#saveSettingsBtn.has-changes {
+  background: #f59e0b;
+  animation: pulse-warning 2s infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+#saveSettingsBtn.saved {
+  background: #22c55e;
+  animation: success-flash 0.5s ease;
+}
+
+@keyframes success-flash {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+#resetSettingsBtn {
+  background: #6b7280;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: 1rem;
+}
+
+#resetSettingsBtn:hover {
+  background: #4b5563;
+}
+
+/* 인앱 알림 시스템 */
+.in-app-notifications {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  pointer-events: none;
+  max-width: 400px;
+}
+
+.in-app-notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-left: 4px solid #3b82f6;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: all 0.3s ease;
+  pointer-events: auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.in-app-notification.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.in-app-notification.hide {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.in-app-notification.success {
+  border-left-color: #22c55e;
+}
+
+.in-app-notification.error {
+  border-left-color: #ef4444;
+}
+
+.in-app-notification.warning {
+  border-left-color: #f59e0b;
+}
+
+.in-app-notification.info {
+  border-left-color: #3b82f6;
+}
+
+.notification-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.notification-message {
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.notification-close:hover {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* 알림 진입 애니메이션 */
+.in-app-notification::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+  animation: notification-shimmer 2s ease-in-out infinite;
+}
+
+@keyframes notification-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* 반응형 디자인 개선 */
+@media (max-width: 768px) {
+  .in-app-notifications {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+  
+  .in-app-notification {
+    margin-bottom: 8px;
+    padding: 12px;
+  }
+  
+  .notification-title {
+    font-size: 13px;
+  }
+  
+  .notification-message {
+    font-size: 12px;
+  }
+}
+
+/* ================================
+   Phase 5: 통합 테스트 스타일
+   ================================ */
+
+/* 리팩토링 성공 상태 */
+body.refactoring-success::before {
+  /* content: '✅ 리팩토링 성공!'; */
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #22c55e;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9999;
+  animation: success-slide-down 0.5s ease;
+}
+
+/* 리팩토링 경고 상태 */
+body.refactoring-warning::before {
+  content: '⚠️ 리팩토링 대부분 완료';
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #f59e0b;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9999;
+  animation: warning-slide-down 0.5s ease;
+}
+
+/* 리팩토링 오류 상태 */
+body.refactoring-error::before {
+  content: '❌ 리팩토링 문제 발생';
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ef4444;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9999;
+  animation: error-slide-down 0.5s ease;
+}
+
+@keyframes success-slide-down {
+  from {
+    transform: translateX(-50%) translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes warning-slide-down {
+  from {
+    transform: translateX(-50%) translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes error-slide-down {
+  from {
+    transform: translateX(-50%) translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 통합 테스트 성공시 메인 헤더 효과 */
+body.refactoring-success .main-header {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  animation: success-pulse 3s ease infinite;
+}
+
+@keyframes success-pulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); }
+  50% { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3); }
 }
 

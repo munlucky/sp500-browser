@@ -4,7 +4,7 @@ class BrowserStockScanner {
         this.corsProxy = 'https://api.allorigins.win/raw?url=';
         this.isScanning = false;
         this.sp500Tickers = [];
-        this.demoMode = true; // 테스트용 데모 모드 활성화
+        this.demoMode = false; // 실제 API 사용
         this.autoUpdateTimeout = null;
         this.autoUpdateEnabled = false;
         this.isAutoUpdating = false; // 업데이트 실행 중 플래그
@@ -185,7 +185,7 @@ class BrowserStockScanner {
                             console.log(`🚀 돌파 발견: ${ticker} $${stock.currentPrice.toFixed(2)} (진입가: $${stock.entryPrice.toFixed(2)})`);
                         } else {
                             results.waitingStocks.push(stock);
-                            console.log(`⏰ 대기 중: ${ticker} $${(stock.currentPrice || 0).toFixed(2)} (진입까지: $${(stock.gapToEntry || 0).toFixed(2)})`);
+                            console.log(`⏰ 대기 중: ${ticker} $${stock.currentPrice.toFixed(2)} (진입까지: $${stock.gapToEntry.toFixed(2)})`);
                         }
 
                         // 상세 로그 (디버깅용)
@@ -363,55 +363,44 @@ class BrowserStockScanner {
         try {
             let stockData;
             
-            let apiData;
-            
-            if (preLoadedData) {
-                // 미리 로드된 데이터가 있으면 사용 (중복 호출 방지)
-                apiData = preLoadedData;
-            } else {
-                // 데이터가 없으면 새로 가져오기
-                apiData = await this.fetchStockData(ticker);
-            }
-            
             if (this.demoMode) {
-                // 데모 모드: 미리 로드된 데이터가 없을 때만 모의 데이터 생성
-                stockData = apiData || this.generateDemoData(ticker);
+                // 데모 모드: 모의 데이터 생성
+                stockData = this.generateDemoData(ticker);
             } else {
                 // 실제 API 모드
+                let apiData;
                 
-                if (!apiData) {
-                    return null;
-                }
-                
-                // API Manager에서 반환된 데이터가 이미 변환된 형태인지 확인
-                if (apiData.currentPrice && apiData.yesterdayClose) {
-                    // 이미 변환된 데이터 사용 (중복 호출 방지)
-                    stockData = apiData;
-                } else if (apiData.timeSeries) {
-                    // Alpha Vantage API 응답 처리
-                    const dates = Object.keys(apiData.timeSeries).sort().reverse();
-                    if (dates.length < 2) return null;
-                    
-                    // 오늘이 2025-07-11 (금요일)이므로 가장 최근 거래일 찾기
-                    const latestDate = dates[0]; // 가장 최근 날짜
-                    const previousDate = dates[1]; // 그 전 거래일
-                    
-                    console.log(`📅 ${ticker} 데이터 날짜: 최근=${latestDate}, 이전=${previousDate}`);
-                    
-                    const today = apiData.timeSeries[latestDate];
-                    const yesterday = apiData.timeSeries[previousDate];
-                    
-                    stockData = {
-                        currentPrice: parseFloat(today['4. close']),
-                        yesterdayClose: parseFloat(yesterday['4. close']),
-                        yesterdayHigh: parseFloat(yesterday['2. high']),
-                        yesterdayLow: parseFloat(yesterday['3. low']),
-                        volume: parseInt(yesterday['5. volume'])
-                    };
+                if (preLoadedData) {
+                    // 미리 로드된 데이터가 있으면 사용 (중복 호출 방지)
+                    apiData = preLoadedData;
                 } else {
-                    console.warn(`❌ ${ticker}: 지원되지 않는 데이터 형식`);
+                    // 데이터가 없으면 새로 가져오기
+                    apiData = await this.fetchStockData(ticker);
+                }
+                
+                if (!apiData || !apiData.timeSeries) {
                     return null;
                 }
+                
+                const dates = Object.keys(apiData.timeSeries).sort().reverse();
+                if (dates.length < 2) return null;
+                
+                // 오늘이 2025-07-11 (금요일)이므로 가장 최근 거래일 찾기
+                const latestDate = dates[0]; // 가장 최근 날짜
+                const previousDate = dates[1]; // 그 전 거래일
+                
+                console.log(`📅 ${ticker} 데이터 날짜: 최근=${latestDate}, 이전=${previousDate}`);
+                
+                const today = apiData.timeSeries[latestDate];
+                const yesterday = apiData.timeSeries[previousDate];
+                
+                stockData = {
+                    currentPrice: parseFloat(today['4. close']),
+                    yesterdayClose: parseFloat(yesterday['4. close']),
+                    yesterdayHigh: parseFloat(yesterday['2. high']),
+                    yesterdayLow: parseFloat(yesterday['3. low']),
+                    volume: parseInt(yesterday['5. volume'])
+                };
             }
             
             // 변동성 돌파 계산
@@ -484,15 +473,55 @@ class BrowserStockScanner {
 
         try {
             // 새로운 API Manager 사용 (다중 소스)
-            if (window.APIManager) {
-                const apiManager = new window.APIManager();
+            if (window.apiManager) {
                 console.log(`📡 ${ticker}: API Manager로 데이터 요청...`);
-                const stockData = await apiManager.fetchStockData(ticker);
+                const stockData = await window.apiManager.queueRequest(ticker);
                 
                 if (stockData) {
                     stockData.ticker = ticker;
                     console.log(`✅ ${ticker}: 데이터 조회 성공 - $${stockData.currentPrice?.toFixed(2) || 'N/A'}`);
                     return stockData;
+                }
+            }
+            
+            // 기본 Alpha Vantage API (백업)
+            if (this.apiKey && this.apiKey !== 'demo') {
+                console.log(`📡 ${ticker} Alpha Vantage API 데이터 가져오는 중...`);
+                const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&apikey=${this.apiKey}`;
+                const response = await fetch(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data['Error Message']) {
+                        console.warn(`❌ ${ticker}: ${data['Error Message']}`);
+                        return null;
+                    }
+                    
+                    if (data['Note']) {
+                        console.warn(`⏰ ${ticker}: API 호출 제한`);
+                        return null;
+                    }
+                    
+                    if (data['Time Series (Daily)']) {
+                        const timeSeries = data['Time Series (Daily)'];
+                        const dates = Object.keys(timeSeries).sort().reverse();
+                        
+                        if (dates.length > 0) {
+                            const latestData = timeSeries[dates[0]];
+                            return {
+                                ticker,
+                                currentPrice: parseFloat(latestData['4. close']),
+                                yesterdayClose: parseFloat(latestData['4. close']),
+                                yesterdayHigh: parseFloat(latestData['2. high']),
+                                yesterdayLow: parseFloat(latestData['3. low']),
+                                yesterdayVolume: parseInt(latestData['5. volume']),
+                                timeSeries: timeSeries
+                            };
+                        }
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
                 }
             }
             
@@ -565,7 +594,7 @@ class BrowserStockScanner {
             let gapDisplay, strategyDisplay = '';
             
             if (type === 'waiting') {
-                gapDisplay = `<div class="gap">돌파까지: $${(stock.gapToEntry || 0).toFixed(2)}</div>`;
+                gapDisplay = `<div class="gap">돌파까지: $${stock.gapToEntry.toFixed(2)}</div>`;
             } else {
                 // 돌파한 종목에 대한 진입 전략 결정
                 const entryStrategy = this.determineEntryStrategy(stock);
@@ -597,17 +626,17 @@ class BrowserStockScanner {
                     ${gapDisplay}
                 </div>
                 <div class="price-info">
-                    <div class="current-price">$${(stock.currentPrice || 0).toFixed(2)}</div>
-                    <div class="entry-price">진입: $${(stock.entryPrice || 0).toFixed(2)}${riskReward}</div>
+                    <div class="current-price">$${stock.currentPrice.toFixed(2)}</div>
+                    <div class="entry-price">진입: $${stock.entryPrice.toFixed(2)}${riskReward}</div>
                 </div>
                 <div class="targets">
-                    <div class="target stop-loss">손절: $${(stock.stopLoss || 0).toFixed(2)}</div>
-                    <div class="target profit">목표1: $${(stock.target1 || 0).toFixed(2)}</div>
-                    <div class="target profit">목표2: $${(stock.target2 || 0).toFixed(2)}</div>
+                    <div class="target stop-loss">손절: $${stock.stopLoss.toFixed(2)}</div>
+                    <div class="target profit">목표1: $${stock.target1.toFixed(2)}</div>
+                    <div class="target profit">목표2: $${stock.target2.toFixed(2)}</div>
                 </div>
                 <div class="stats">
-                    <span>변동률: ${(stock.volatility || 0).toFixed(1)}%</span>
-                    <span>거래량: ${this.formatNumber(stock.volume || stock.yesterdayVolume || 0)}</span>
+                    <span>변동률: ${stock.volatility.toFixed(1)}%</span>
+                    <span>거래량: ${this.formatNumber(stock.volume)}</span>
                     <span>점수: ${stock.score || 0}/100</span>
                 </div>
                 ${strategyDisplay}
@@ -657,10 +686,6 @@ class BrowserStockScanner {
     }
 
     formatNumber(num) {
-        if (!num || isNaN(num)) {
-            return '0';
-        }
-        
         if (num >= 1000000) {
             return (num / 1000000).toFixed(1) + 'M';
         } else if (num >= 1000) {
@@ -736,14 +761,6 @@ class BrowserStockScanner {
         if (autoUpdateToggleBtn) {
             autoUpdateToggleBtn.addEventListener('click', () => {
                 this.toggleAutoUpdate();
-            });
-        }
-
-        // 재확인 버튼 이벤트
-        const reCheckBtn = document.getElementById('reCheckBtn');
-        if (reCheckBtn) {
-            reCheckBtn.addEventListener('click', () => {
-                this.reCheckBreakoutStocks();
             });
         }
 
@@ -952,11 +969,11 @@ class BrowserStockScanner {
             this.stopProgressIndicator();
             
             // API Manager의 대기 중인 요청들도 취소
-            if (window.APIManager) {
-                const wasActive = window.APIManager.isActive();
+            if (window.apiManager) {
+                const wasActive = window.apiManager.isActive();
                 if (wasActive) {
                     console.log('🛑 API Manager 요청 취소 중...');
-                    window.APIManager.cancelAllRequests();
+                    window.apiManager.cancelAllRequests();
                 }
             }
             
@@ -985,108 +1002,6 @@ class BrowserStockScanner {
                 console.warn('⚠️ 스캔 결과가 없어 자동 업데이트를 시작할 수 없습니다. 먼저 스캔을 실행하세요.');
                 this.updateStatus('스캔 결과가 없습니다. 먼저 스캔을 실행하세요.', 'error');
             }
-        }
-    }
-
-    // 저장된 결과에서 돌파종목 재확인
-    async reCheckBreakoutStocks() {
-        try {
-            // 저장된 결과 불러오기
-            const savedResults = StorageManager.getResults();
-            if (!savedResults) {
-                alert('저장된 스캔 결과가 없습니다. 먼저 스캔을 실행해주세요.');
-                return;
-            }
-
-            // 모든 저장된 종목 수집 (돌파 + 대기)
-            const allStocks = [
-                ...(savedResults.breakoutStocks || []),
-                ...(savedResults.waitingStocks || [])
-            ];
-
-            if (allStocks.length === 0) {
-                alert('재확인할 종목이 없습니다.');
-                return;
-            }
-
-            this.updateStatus('저장된 종목 재확인 중...', 'scanning');
-            console.log(`🔍 ${allStocks.length}개 저장된 종목 재확인 시작...`);
-
-            const reCheckResults = {
-                breakoutStocks: [],
-                waitingStocks: [],
-                totalScanned: 0,
-                errors: 0,
-                timestamp: new Date().toISOString()
-            };
-
-            // 각 종목에 대해 현재 상태 재확인
-            for (let i = 0; i < allStocks.length; i++) {
-                const stock = allStocks[i];
-                
-                try {
-                    // 진행률 업데이트
-                    const progress = Math.round(((i + 1) / allStocks.length) * 100);
-                    this.updateStatus(`재확인 중... ${i + 1}/${allStocks.length} (${progress}%)`, 'scanning');
-                    
-                    // 현재 주식 데이터 가져오기
-                    const stockData = await this.fetchStockData(stock.ticker);
-                    
-                    if (stockData) {
-                        // 현재 설정으로 다시 분석
-                        const settings = StorageManager.getSettings();
-                        const analysis = await this.analyzeStock(stock.ticker, settings, stockData);
-                        
-                        if (analysis) {
-                            // 돌파/대기 분류
-                            if (analysis.breakoutSignal === 'breakout') {
-                                reCheckResults.breakoutStocks.push(analysis);
-                            } else if (analysis.breakoutSignal === 'waiting') {
-                                reCheckResults.waitingStocks.push(analysis);
-                            }
-                            reCheckResults.totalScanned++;
-                        }
-                    } else {
-                        reCheckResults.errors++;
-                    }
-                    
-                    // API 부하 방지를 위한 딜레이
-                    if (i < allStocks.length - 1) {
-                        await this.delay(1000);
-                    }
-                    
-                } catch (error) {
-                    console.warn(`❌ ${stock.ticker} 재확인 실패:`, error);
-                    reCheckResults.errors++;
-                }
-            }
-
-            // 결과 저장 및 표시
-            this.lastScanResults = reCheckResults;
-            StorageManager.saveResults(reCheckResults);
-            this.displayResults(reCheckResults);
-
-            // 완료 메시지
-            const statusMessage = `재확인 완료: ${reCheckResults.totalScanned}개 종목 ` +
-                `(돌파: ${reCheckResults.breakoutStocks.length}, 대기: ${reCheckResults.waitingStocks.length})`;
-            
-            this.updateStatus(statusMessage, 'completed');
-            console.log(`✅ ${statusMessage}`);
-
-            // 돌파 알림
-            if (reCheckResults.breakoutStocks.length > 0 && typeof NotificationManager !== 'undefined') {
-                NotificationManager.sendBreakoutAlert(reCheckResults.breakoutStocks);
-            }
-
-            // 자동 업데이트 재시작
-            const settings = StorageManager.getSettings();
-            if (!this.autoUpdateEnabled && settings.autoUpdateEnabled) {
-                this.startAutoUpdate();
-            }
-
-        } catch (error) {
-            console.error('❌ 재확인 중 오류 발생:', error);
-            this.updateStatus('재확인 중 오류가 발생했습니다.', 'error');
         }
     }
 
@@ -1181,22 +1096,19 @@ class BrowserStockScanner {
             }
 
             // 전체 스캔과 동일한 API Manager 사용
-            if (window.APIManager) {
-                const apiManager = new window.APIManager();
-                const stockData = await apiManager.fetchStockData(ticker);
+            if (window.apiManager) {
+                const stockData = await window.apiManager.queueRequest(ticker);
                 
                 if (stockData && stockData.currentPrice) {
                     return stockData.currentPrice;
                 }
             }
-
-            Utils.delay(1000); // API 호출 간 지연
             
             // API Manager가 실패한 경우 fetchStockData 사용 (백업)
-            // const fullData = await this.fetchStockData(ticker);
-            // if (fullData && fullData.currentPrice) {
-            //     return fullData.currentPrice;
-            // }
+            const fullData = await this.fetchStockData(ticker);
+            if (fullData && fullData.currentPrice) {
+                return fullData.currentPrice;
+            }
             
         } catch (error) {
             console.warn(`❌ ${ticker} 현재가 조회 실패:`, error.message);

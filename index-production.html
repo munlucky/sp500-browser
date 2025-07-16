@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>S&P 500 실시간 돌파 스캐너</title>
     
-    <!-- PWA 설정 (HTTP/HTTPS에서만 동작) -->
+    <!-- PWA 설정 -->
     <meta name="theme-color" content="#2563eb">
     <meta name="description" content="실시간 S&P 500 변동성 돌파 종목 추천 서비스">
     <meta name="keywords" content="S&P 500, 주식, 스캐너, 변동성, 돌파, 투자">
@@ -25,7 +25,6 @@
     
     <!-- 동적 manifest 로드 -->
     <script>
-        // HTTP/HTTPS 환경에서만 manifest 로드
         if (location.protocol !== 'file:') {
             const manifestLink = document.createElement('link');
             manifestLink.rel = 'manifest';
@@ -38,7 +37,6 @@
     <link rel="stylesheet" href="css/style.css">
     
     <!-- Preconnect to external domains -->
-    <link rel="preconnect" href="https://www.alphavantage.co">
     <link rel="preconnect" href="https://finance.yahoo.com">
     
     <!-- 추가 Viewport Meta -->
@@ -113,15 +111,6 @@
 
                 <!-- 보조 컨트롤 -->
                 <div class="secondary-controls">
-                    <!-- 재확인 버튼 -->
-                    <button id="reCheckBtn" class="control-btn recheck-btn" title="저장된 종목 재확인">
-                        <span class="ctrl-icon">🔍</span>
-                        <div class="ctrl-content">
-                            <span class="ctrl-title">재확인</span>
-                            <span class="ctrl-subtitle">저장된 종목</span>
-                        </div>
-                    </button>
-                    
                     <!-- 자동 업데이트 토글 -->
                     <button id="autoUpdateToggleBtn" class="control-btn auto-update-btn" title="실시간 가격 자동 업데이트">
                         <span class="ctrl-icon">⏸️</span>
@@ -162,8 +151,6 @@
             </div>
         </nav>
 
-
-
         <!-- 실시간 돌파 종목 -->
         <section class="results-section">
             <h2>🚀 실시간 돌파 종목 (진입가 돌파 완료)</h2>
@@ -179,7 +166,6 @@
                 <div class="no-results">스마트 스캔을 시작하여 대기 종목을 찾아보세요!</div>
             </div>
         </section>
-
 
         <!-- 오프라인 표시 -->
         <div id="offlineIndicator" class="offline-indicator hidden">
@@ -256,6 +242,12 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- 저장/리셋 버튼 -->
+                <div style="margin-top: 20px; text-align: right;">
+                    <button id="resetSettingsBtn">기본값으로 리셋</button>
+                    <button id="saveSettingsBtn">저장</button>
+                </div>
             </div>
         </div>
     </div>
@@ -299,8 +291,7 @@
         </div>
     </div>
 
-
-    <!-- Loading overlay (초기화 중 표시) -->
+    <!-- Loading overlay -->
     <div id="loadingOverlay" style="
         position: fixed;
         top: 0;
@@ -320,47 +311,39 @@
         </div>
     </div>
 
-    <!-- 스크립트 로드 순서 중요 -->
+    <!-- 프로덕션 스크립트 로드 (테스트 코드 제외) -->
     <!-- Phase 1: 기반 인프라 -->
-    <script src="js/utils/constants.js"></script> <!-- 상수 정의 (가장 먼저) -->
-    <script src="js/utils/index.js"></script> <!-- 공통 유틸리티 -->
-    <script src="js/core/DIContainer.js"></script> <!-- 의존성 주입 컨테이너 -->
-    <script src="js/core/EventBus.js"></script> <!-- 이벤트 버스 -->
-    <script src="js/core/phase1-test.js"></script> <!-- Phase 1 검증 (개발용) -->
+    <script src="js/utils/constants.js"></script>
+    <script src="js/utils/index.js"></script>
+    <script src="js/core/DIContainer.js"></script>
+    <script src="js/core/EventBus.js"></script>
     
     <!-- Phase 2: Core 모듈 -->
-    <script src="js/errors/AppError.js"></script> <!-- 커스텀 에러 클래스 -->
-    <script src="js/errors/ErrorHandler.js"></script> <!-- 통합 에러 처리 -->
-    <script src="js/services/StorageManager.js"></script> <!-- 개선된 저장소 관리 -->
-    <script src="js/services/APIManager.js"></script> <!-- 개선된 API 관리 -->
-    <script src="js/core/phase2-test.js"></script> <!-- Phase 2 검증 (개발용) -->
+    <script src="js/errors/AppError.js"></script>
+    <script src="js/errors/ErrorHandler.js"></script>
+    <script src="js/services/StorageManager.js"></script>
+    <script src="js/services/APIManager.js"></script>
     
     <!-- Phase 3: Scanner 모듈 분할 -->
-    <script src="js/services/DataCollector.js"></script> <!-- 데이터 수집 서비스 -->
-    <script src="js/services/StockAnalyzer.js"></script> <!-- 주식 분석 서비스 -->
-    <script src="js/components/UIRenderer.js"></script> <!-- UI 렌더링 컴포넌트 -->
-    <script src="js/components/AutoUpdater.js"></script> <!-- 자동 업데이트 컴포넌트 -->
-    <script src="js/services/Scanner.js"></script> <!-- 메인 스캐너 (조정자) -->
-    <script src="js/core/compatibility-layer.js"></script> <!-- 기존 코드 호환성 레이어 -->
-    <script src="js/core/phase3-test.js"></script> <!-- Phase 3 검증 (개발용) -->
+    <script src="js/services/DataCollector.js"></script>
+    <script src="js/services/StockAnalyzer.js"></script>
+    <script src="js/components/UIRenderer.js"></script>
+    <script src="js/components/AutoUpdater.js"></script>
+    <script src="js/services/Scanner.js"></script>
+    <script src="js/core/compatibility-layer.js"></script>
     
     <!-- Phase 4: UI 컴포넌트 모듈화 -->
-    <script src="js/components/DashboardComponent.js"></script> <!-- 대시보드 컴포넌트 -->
-    <script src="js/components/SettingsComponent.js"></script> <!-- 설정 컴포넌트 -->
-    <script src="js/components/NotificationComponent.js"></script> <!-- 알림 컴포넌트 -->
+    <script src="js/components/DashboardComponent.js"></script>
+    <script src="js/components/SettingsComponent.js"></script>
+    <script src="js/components/NotificationComponent.js"></script>
     
-    <!-- Phase 5: 통합 테스트 및 최종 검증 -->
-    <script src="js/core/integration-test.js"></script> <!-- 통합 테스트 -->
-    
-    <!-- 기존 스크립트들 (리팩토링된 모듈과 충돌 방지를 위해 주석 처리) -->
-    <script src="js/logger.js"></script> <!-- 로그 시스템 (가장 먼저 로드) -->
-    <!-- <script src="js/storage.js"></script> --> <!-- 새로운 StorageManager로 대체됨 -->
+    <!-- 기존 스크립트들 (필수만) -->
+    <script src="js/logger.js"></script>
     <script src="js/calculator.js"></script>
     <script src="js/notifications.js"></script>
-    <!-- <script src="js/api-manager.js"></script> --> <!-- 새로운 APIManager로 대체됨 -->
-    <script src="js/smart-scanner.js"></script> <!-- 스마트 스캐너 (효율적 스캔 전략) -->
+    <script src="js/smart-scanner.js"></script>
     <script src="js/scanner.js"></script>
-    <script src="js/breakout-tracker.js"></script> <!-- 새로운 돌파 추적 시스템 -->
+    <script src="js/breakout-tracker.js"></script>
     <script src="js/app.js"></script>
     
     <!-- 초기화 완료 후 로딩 오버레이 제거 -->
@@ -408,7 +391,7 @@
         
         // DOM 로드 후 확인 시작
         document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(checkInitialization, 1000); // 1초 후부터 확인
+            setTimeout(checkInitialization, 1000);
         });
         
         // 최대 10초 후 강제 제거
@@ -422,9 +405,7 @@
 
     <!-- 추가 초기화 스크립트 -->
     <script>
-        // API 관리자 및 스마트 스캐너 통합 스크립트
         document.addEventListener('DOMContentLoaded', () => {
-            // 초기화 완료 대기 후 시스템 설정
             setTimeout(() => {
                 // 스마트 스캐너 초기화
                 if (window.smartScanner) {
@@ -435,32 +416,30 @@
                 if (typeof breakoutTracker !== 'undefined' && breakoutTracker) {
                     console.log('✅ 돌파 추적 시스템 사용 가능');
                     
-                    // 기본 설정 적용
-                    // 데모 모드 체크박스 초기화 (이벤트 리스너는 scanner.js에서 처리)
                     const demoModeCheck = document.getElementById('demoMode');
                     if (demoModeCheck) {
-                        const settings = StorageManager.getSettings();
-                        demoModeCheck.checked = settings.demoMode;
+                        demoModeCheck.checked = false;
+                        demoModeCheck.addEventListener('change', (e) => {
+                            if (window.stockScanner) {
+                                window.stockScanner.demoMode = e.target.checked;
+                                console.log(`데모 모드: ${e.target.checked ? 'ON' : 'OFF'}`);
+                            }
+                        });
                     }
-                } else {
-                    console.warn('⚠️ 돌파 추적 시스템을 찾을 수 없습니다.');
                 }
                 
                 // API 관리자 요청 기록 로드
                 if (window.apiManager) {
                     console.log('✅ API 관리자 사용 가능');
                     window.apiManager.loadRequestCounts();
-                    console.log('📊 API 상태:', window.apiManager.getAPIStatus());
                 }
                 
                 // 로그 시스템 초기화
                 if (window.logger) {
                     console.log('✅ 로그 시스템 사용 가능');
-                    
-                    // 저장된 로그 불러오기
                     window.logger.loadFromStorage();
                     
-                    // 설정 드롭다운 이벤트 바인딩
+                    // UI 이벤트 바인딩
                     const settingsDropdownBtn = document.getElementById('settingsDropdownBtn');
                     const settingsDropdownMenu = document.getElementById('settingsDropdownMenu');
                     const settingsDropdown = document.querySelector('.settings-dropdown');
@@ -472,19 +451,17 @@
                             settingsDropdown.classList.toggle('active');
                         });
                         
-                        // 드롭다운 외부 클릭시 닫기
                         document.addEventListener('click', () => {
                             settingsDropdownMenu.classList.add('hidden');
                             settingsDropdown.classList.remove('active');
                         });
                         
-                        // 드롭다운 내부 클릭시 이벤트 전파 중지
                         settingsDropdownMenu.addEventListener('click', (e) => {
                             e.stopPropagation();
                         });
                     }
                     
-                    // 개별 메뉴 아이템 이벤트 바인딩
+                    // 메뉴 아이템 이벤트 바인딩
                     const logBtn = document.getElementById('logBtn');
                     const settingsBtn = document.getElementById('settingsBtn');
                     const helpBtn = document.getElementById('helpBtn');
@@ -495,7 +472,6 @@
                     const closeSettingsBtn = document.getElementById('closeSettingsBtn');
                     const closeHelpBtn = document.getElementById('closeHelpBtn');
                     
-                    // 로그 버튼
                     if (logBtn) {
                         logBtn.addEventListener('click', () => {
                             window.logger.toggle();
@@ -504,7 +480,6 @@
                         });
                     }
                     
-                    // 설정 모달
                     if (settingsBtn && settingsModal) {
                         settingsBtn.addEventListener('click', () => {
                             settingsModal.classList.remove('hidden');
@@ -519,7 +494,6 @@
                         });
                     }
                     
-                    // 도움말 모달
                     if (helpBtn && helpModal) {
                         helpBtn.addEventListener('click', () => {
                             helpModal.classList.remove('hidden');
@@ -534,11 +508,8 @@
                         });
                     }
                     
-                    
-                    // 알림 설정 (기존 기능 유지)
                     if (notificationBtn) {
                         notificationBtn.addEventListener('click', () => {
-                            // 기존 알림 설정 로직
                             settingsDropdownMenu.classList.add('hidden');
                             settingsDropdown.classList.remove('active');
                         });
@@ -555,57 +526,15 @@
                         }
                     });
                     
-                    // 환영 메시지 (콘솔로만)
                     console.log('✅ S&P 500 스캐너가 성공적으로 초기화되었습니다');
-                    console.log('📋 Ctrl+L (또는 Cmd+L)로 로그 패널을 열고 닫을 수 있습니다');
                 }
                 
             }, 2000);
-        });
-        
-        function updateMarketStatus() {
-            const now = new Date();
-            const currentTime = now.getHours() * 60 + now.getMinutes();
-            const currentDay = now.getDay();
-            
-            const statusEl = document.getElementById('marketStatus');
-            const iconEl = document.getElementById('marketStatusIcon');
-            const textEl = document.getElementById('marketStatusText');
-            
-            if (!statusEl || !iconEl || !textEl) return; // 요소가 없으면 무시
-            
-            const isWeekend = currentDay === 0 || currentDay === 6;
-            const isMarketHours = currentTime >= (9 * 60 + 30) && currentTime < (16 * 60);
-            const isOpen = !isWeekend && isMarketHours;
-            
-            if (isOpen) {
-                statusEl.className = 'market-status open';
-                iconEl.textContent = '🟢';
-                textEl.textContent = '장중 (US Market Open)';
-            } else if (isWeekend) {
-                statusEl.className = 'market-status closed';
-                iconEl.textContent = '🔴';
-                textEl.textContent = '주말 휴장';
-            } else {
-                statusEl.className = 'market-status closed';
-                iconEl.textContent = '🟡';
-                textEl.textContent = '장 마감';
-            }
-        }
-        
-        // DOM 로드 후 초기화
-        document.addEventListener('DOMContentLoaded', () => {
-            // 시장 상태 업데이트 (요소가 있을 때만)
-            setTimeout(() => {
-                updateMarketStatus();
-                setInterval(updateMarketStatus, 60000); // 1분마다 업데이트
-            }, 1000);
         });
     </script>
 
     <!-- PWA 서비스 워커 등록 -->
     <script>
-        // 서비스 워커 등록 (HTTPS에서만)
         if ('serviceWorker' in navigator && location.protocol === 'https:') {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -618,17 +547,6 @@
             });
         }
     </script>
-
-    <!-- Google Analytics (선택사항) -->
-    <!--
-    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'GA_MEASUREMENT_ID');
-    </script>
-    -->
     
 </body>
 </html>

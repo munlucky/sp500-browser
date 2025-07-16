@@ -13,11 +13,29 @@ class App {
             // 기본 상태 확인
             this.checkBrowserCompatibility();
             
+            // 필수 클래스들이 로드되었는지 확인
+            this.checkRequiredClasses();
+            
             // 캐시 정리 (어제 날짜 데이터 삭제)
             StorageManager.initializeCacheCleanup();
             
             // 스캐너 초기화
-            this.scanner = await initScanner();
+            try {
+                console.log('📡 스캐너 초기화 시작...');
+                
+                // initScanner 함수 존재 확인
+                if (typeof window.initScanner !== 'function') {
+                    throw new Error('initScanner 함수를 찾을 수 없습니다. 호환성 레이어가 로드되지 않았을 수 있습니다.');
+                }
+                
+                console.log('🔧 initScanner 함수 호출...');
+                this.scanner = await initScanner();
+                console.log('✅ 스캐너 초기화 완료');
+            } catch (scannerError) {
+                console.error('❌ 스캐너 초기화 실패:', scannerError);
+                console.error('❌ 스캐너 오류 스택:', scannerError.stack);
+                throw new Error(`스캐너 초기화 실패: ${scannerError.message}`);
+            }
             
             // 돌파 추적 시스템 초기화
             this.breakoutTracker = await initBreakoutTracker();
@@ -48,6 +66,7 @@ class App {
             
         } catch (error) {
             console.error('❌ 앱 초기화 실패:', error);
+            console.error('❌ 상세 스택 트레이스:', error.stack);
             this.showError('앱을 초기화하는 중 오류가 발생했습니다: ' + error.message);
             
             // 최소 기능이라도 동작하도록 폴백
@@ -77,6 +96,38 @@ class App {
             this.showError(message);
         } else {
             console.log('✅ 브라우저 호환성 확인 완료');
+        }
+    }
+
+    checkRequiredClasses() {
+        const requiredClasses = {
+            'Constants': () => typeof window.Constants !== 'undefined',
+            'EventBus': () => typeof window.EventBus !== 'undefined',
+            'DIContainer': () => typeof window.DIContainer !== 'undefined',
+            'ErrorHandler': () => typeof window.ErrorHandler !== 'undefined',
+            'StorageManager': () => typeof window.StorageManager !== 'undefined',
+            'APIManager': () => typeof window.APIManager !== 'undefined',
+            'DataCollector': () => typeof window.DataCollector !== 'undefined',
+            'StockAnalyzer': () => typeof window.StockAnalyzer !== 'undefined',
+            'UIRenderer': () => typeof window.UIRenderer !== 'undefined',
+            'AutoUpdater': () => typeof window.AutoUpdater !== 'undefined',
+            'Scanner': () => typeof window.Scanner !== 'undefined'
+        };
+
+        const missingClasses = [];
+        
+        for (const [className, check] of Object.entries(requiredClasses)) {
+            if (!check()) {
+                missingClasses.push(className);
+            }
+        }
+
+        if (missingClasses.length > 0) {
+            const message = `다음 필수 클래스들이 로드되지 않았습니다: ${missingClasses.join(', ')}`;
+            console.error('❌ ' + message);
+            throw new Error(message);
+        } else {
+            console.log('✅ 필수 클래스 로딩 확인 완료');
         }
     }
 
@@ -307,8 +358,11 @@ class App {
             // localStorage 사용량 모니터링
             const checkStorageUsage = () => {
                 try {
-                    const usage = StorageManager.getStorageUsage();
-                    if (usage.usedMB > 3) { // 3MB 이상 사용 시 경고
+                    const usage = StorageManager.getStorageInfo ? 
+                        StorageManager.getStorageInfo() : 
+                        StorageManager.getStorageUsage();
+                    
+                    if (usage && usage.usedMB && usage.usedMB > 3) { // 3MB 이상 사용 시 경고
                         console.warn(`⚠️ 높은 저장소 사용량: ${usage.usedMB}MB`);
                         
                         // 필요시 오래된 캐시 삭제
