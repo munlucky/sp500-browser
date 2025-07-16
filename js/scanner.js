@@ -417,7 +417,7 @@ class BrowserStockScanner {
             // 변동성 돌파 계산
             const calculation = VolatilityCalculator.calculate(stockData, settings);
             
-            if (!calculation.meetsConditions) {
+            if (!calculation || !calculation.meetsConditions) {
                 return null;
             }
             
@@ -518,6 +518,7 @@ class BrowserStockScanner {
         
         // 스캔 완료 후 자동 업데이트 시작 (설정에서 활성화된 경우)
         const settings = StorageManager.getSettings();
+        
         if (!this.autoUpdateEnabled && settings.autoUpdateEnabled) {
             this.startAutoUpdate();
         }
@@ -952,11 +953,11 @@ class BrowserStockScanner {
             this.stopProgressIndicator();
             
             // API Manager의 대기 중인 요청들도 취소
-            if (window.APIManager) {
-                const wasActive = window.APIManager.isActive();
+            if (window.apiManager) {
+                const wasActive = window.apiManager.isActive();
                 if (wasActive) {
                     console.log('🛑 API Manager 요청 취소 중...');
-                    window.APIManager.cancelAllRequests();
+                    window.apiManager.cancelAllRequests();
                 }
             }
             

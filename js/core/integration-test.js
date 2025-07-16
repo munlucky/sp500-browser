@@ -189,7 +189,7 @@ async function testDataFlow(results) {
                 yesterdayClose: 148,
                 yesterdayHigh: 152,
                 yesterdayLow: 145,
-                volume: 1000000
+                yesterdayVolume: 1000000
             };
             
             const calculation = VolatilityCalculator.calculate(testData, {

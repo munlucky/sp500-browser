@@ -4,7 +4,8 @@ class StorageManager {
         SETTINGS: 'sp500_settings',
         CACHE: 'sp500_cache',
         FAVORITES: 'sp500_favorites',
-        WATCHLIST_CANDIDATES: 'sp500_watchlist_candidates'
+        WATCHLIST_CANDIDATES: 'sp500_watchlist_candidates',
+        STOCK_DATA_CACHE: 'sp500_stock_data_cache'
     };
     
     static saveResults(results) {
@@ -61,7 +62,7 @@ class StorageManager {
             breakoutFactor: 0.6,
             
             // 자동 업데이트 설정
-            autoUpdateEnabled: true,
+            autoUpdateEnabled: false,
             updateInterval: 60, // 초 단위
             
             // 시스템 설정
@@ -263,6 +264,54 @@ class StorageManager {
         } catch (error) {
             console.error('❌ 캐시 정리 실패:', error);
             return 0;
+        }
+    }
+
+    // 스톡 데이터 캐시 관리
+    static saveStockDataCache(stockDataMap) {
+        try {
+            const today = new Date().toDateString();
+            const cacheData = {
+                date: today,
+                timestamp: new Date().toISOString(),
+                data: stockDataMap
+            };
+            localStorage.setItem(this.KEYS.STOCK_DATA_CACHE, JSON.stringify(cacheData));
+            console.log(`✅ 스톡 데이터 캐시 저장됨: ${Object.keys(stockDataMap).length}개 종목`);
+        } catch (error) {
+            console.error('❌ 스톡 데이터 캐시 저장 실패:', error);
+        }
+    }
+
+    static getStockDataCache() {
+        try {
+            const data = localStorage.getItem(this.KEYS.STOCK_DATA_CACHE);
+            if (!data) return null;
+            
+            const cacheData = JSON.parse(data);
+            const today = new Date().toDateString();
+            
+            // 오늘 데이터인지 확인
+            if (cacheData.date === today) {
+                console.log(`✅ 오늘 스톡 데이터 캐시 로드됨: ${Object.keys(cacheData.data).length}개 종목`);
+                return cacheData.data;
+            } else {
+                console.log('🗑️ 어제 스톡 데이터 캐시 삭제됨');
+                localStorage.removeItem(this.KEYS.STOCK_DATA_CACHE);
+                return null;
+            }
+        } catch (error) {
+            console.error('❌ 스톡 데이터 캐시 로드 실패:', error);
+            return null;
+        }
+    }
+
+    static clearStockDataCache() {
+        try {
+            localStorage.removeItem(this.KEYS.STOCK_DATA_CACHE);
+            console.log('✅ 스톡 데이터 캐시 삭제됨');
+        } catch (error) {
+            console.error('❌ 스톡 데이터 캐시 삭제 실패:', error);
         }
     }
 }

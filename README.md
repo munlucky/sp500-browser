@@ -291,7 +291,7 @@ class StorageManager {
             minVolume: 1000000,       // 100만주 최소 거래량
             minPrice: 10,             // $10 최소 가격
             demoMode: true,           // 데모 모드 기본값
-            autoUpdateEnabled: true   // 자동 업데이트 기본값
+            autoUpdateEnabled: false   // 자동 업데이트 기본값
         };
     }
 

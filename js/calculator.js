@@ -12,7 +12,7 @@ class VolatilityCalculator {
                 yesterdayClose,
                 yesterdayHigh,
                 yesterdayLow,
-                volume
+                yesterdayVolume: volume
             } = validatedData;
             
             // 기본 설정 with 안전한 기본값
@@ -129,7 +129,7 @@ class VolatilityCalculator {
     static validateStockData(data) {
         if (!data || typeof data !== 'object') return null;
         
-        const required = ['currentPrice', 'yesterdayClose', 'yesterdayHigh', 'yesterdayLow', 'volume'];
+        const required = ['currentPrice', 'yesterdayClose', 'yesterdayHigh', 'yesterdayLow', 'yesterdayVolume'];
         
         for (const field of required) {
             if (!(field in data) || !this.isValidNumber(data[field])) {
@@ -139,7 +139,7 @@ class VolatilityCalculator {
         }
         
         // 논리적 검증
-        const { yesterdayHigh, yesterdayLow, yesterdayClose, currentPrice, volume } = data;
+        const { yesterdayHigh, yesterdayLow, yesterdayClose, currentPrice, yesterdayVolume: volume } = data;
         
         if (yesterdayHigh < yesterdayLow) {
             console.error('논리 오류: 고가가 저가보다 낮음');

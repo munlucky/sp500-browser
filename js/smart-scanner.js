@@ -164,67 +164,89 @@ class SmartScanner {
         };
         
         const settings = StorageManager.getSettings();
-        const totalBatches = Math.ceil(tickers.length / batchSize);
         
-        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-            const batchStart = batchIndex * batchSize;
-            const batchEnd = Math.min(batchStart + batchSize, tickers.length);
-            const batchTickers = tickers.slice(batchStart, batchEnd);
+        // 캐시된 데이터 확인
+        const cachedData = (typeof StorageManager.getStockDataCache === 'function') 
+            ? StorageManager.getStockDataCache() 
+            : null;
+        const stockDataMap = new Map();
+        
+        if (cachedData) {
+            console.log('📋 캐시된 데이터 사용 중...');
+            Object.entries(cachedData).forEach(([ticker, data]) => {
+                stockDataMap.set(ticker, data);
+            });
+        }
+        
+        // 캐시되지 않은 티커들만 새로 조회
+        const tickersToFetch = tickers.filter(ticker => !stockDataMap.has(ticker));
+        
+        if (tickersToFetch.length > 0) {
+            console.log(`📡 새로 조회할 종목: ${tickersToFetch.length}개`);
             
-            console.log(`📦 배치 ${batchIndex + 1}/${totalBatches} 처리 중... (${batchTickers.length}개 종목)`);
+            const totalBatches = Math.ceil(tickersToFetch.length / batchSize);
             
-            // 순차적 처리로 변경 (429 에러 방지)
-            const batchResults = [];
-            for (let i = 0; i < batchTickers.length; i++) {
-                const ticker = batchTickers[i];
-                try {
-                    // 각 요청 간 1초 딜레이
-                    if (i > 0) {
-                        await this.delay(1000);
-                    }
-                    
-                    const stockData = await window.stockScanner.fetchStockData(ticker);
-                    
-                    if (stockData) {
-                        const result = await window.stockScanner.analyzeStock(ticker, settings, stockData);
-                        batchResults.push({ status: 'fulfilled', value: result });
-                    } else {
-                        batchResults.push({ status: 'fulfilled', value: null });
-                    }
-                } catch (error) {
-                    console.warn(`❌ ${ticker} 스캔 실패:`, error);
-                    results.errors++;
-                    batchResults.push({ status: 'rejected', reason: error });
-                }
-            }
-            
-            // 결과 처리
-            batchResults.forEach((result) => {
-                if (result.status === 'fulfilled' && result.value) {
-                    const analysis = result.value;
-                    
-                    if (analysis.breakoutSignal === 'breakout') {
-                        results.breakoutStocks.push(analysis);
-                    } else if (analysis.breakoutSignal === 'waiting') {
-                        results.waitingStocks.push(analysis);
+            for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+                const batchStart = batchIndex * batchSize;
+                const batchEnd = Math.min(batchStart + batchSize, tickersToFetch.length);
+                const batchTickers = tickersToFetch.slice(batchStart, batchEnd);
+                
+                console.log(`📦 배치 ${batchIndex + 1}/${totalBatches} 처리 중... (${batchTickers.length}개 종목)`);
+                
+                // 순차적 처리로 변경 (429 에러 방지)
+                for (let i = 0; i < batchTickers.length; i++) {
+                    const ticker = batchTickers[i];
+                    try {
+                        // 각 요청 간 1초 딜레이
+                        if (i > 0 || batchIndex > 0) {
+                            await this.delay(1000);
+                        }
+                        
+                        const stockData = await window.stockScanner.fetchStockData(ticker);
+                        
+                        if (stockData) {
+                            stockDataMap.set(ticker, stockData);
+                        }
+                    } catch (error) {
+                        console.warn(`❌ ${ticker} 조회 실패:`, error);
+                        results.errors++;
                     }
                 }
                 
-                results.totalScanned++;
-            });
-            
-            // 배치 간 대기 (Yahoo Finance는 제한이 적어 대기 시간 단축)
-            if (batchIndex < totalBatches - 1) {
-                console.log(`⏳ 다음 배치까지 5초 대기...`);
-                await this.delay(5000);
+                console.log(`✅ 배치 ${batchIndex + 1} 완료: ${batchTickers.length}개 종목 처리`);
             }
             
-            // 진행률 업데이트
-            const overallProgress = Math.round(((batchIndex + 1) / totalBatches) * 100);
-            window.stockScanner.updateStatus(
-                `배치 스캔 중... 배치 ${batchIndex + 1}/${totalBatches} (${overallProgress}%)`, 
-                'scanning'
-            );
+            // 새로 조회한 데이터를 캐시에 저장
+            if (typeof StorageManager.saveStockDataCache === 'function') {
+                const cacheObject = {};
+                stockDataMap.forEach((data, ticker) => {
+                    cacheObject[ticker] = data;
+                });
+                StorageManager.saveStockDataCache(cacheObject);
+            }
+        }
+        
+        // 모든 데이터를 분석
+        for (const ticker of tickers) {
+            const stockData = stockDataMap.get(ticker);
+            
+            if (stockData) {
+                try {
+                    const result = await window.stockScanner.analyzeStock(ticker, settings, stockData);
+                    results.totalScanned++;
+                    
+                    if (result) {
+                        if (result.meetsConditions) {
+                            results.breakoutStocks.push(result);
+                        } else {
+                            results.waitingStocks.push(result);
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`❌ ${ticker} 분석 실패:`, error);
+                    results.errors++;
+                }
+            }
         }
         
         return results;
@@ -266,7 +288,7 @@ class SmartScanner {
      */
     async adaptiveScan(allTickers) {
         const strategy = await this.determineOptimalStrategy();
-        await this.scanInBatches(allTickers, strategy.batchSize);
+        return await this.scanInBatches(allTickers, allTickers.length);
         // console.log(`🧠 적응형 스캔: ${strategy.description}`);
         
         // switch (strategy.strategy) {
