@@ -236,7 +236,8 @@ class SmartScanner {
                     results.totalScanned++;
                     
                     if (result) {
-                        if (result.meetsConditions) {
+                        // 조건 만족 여부와 상관없이 돌파 여부로 분류
+                        if (result.isBreakout) {
                             results.breakoutStocks.push(result);
                         } else {
                             results.waitingStocks.push(result);

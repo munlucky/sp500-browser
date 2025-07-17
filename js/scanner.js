@@ -199,7 +199,7 @@ class BrowserStockScanner {
                         });
                     } else {
                         results.errors++;
-                        console.warn(`❌ ${ticker} 분석 실패: 조건 불만족`);
+                        console.warn(`❌ ${ticker} 분석 실패: 데이터 없음 또는 계산 오류`);
                     }
                 } catch (error) {
                     results.errors++;
@@ -417,10 +417,11 @@ class BrowserStockScanner {
             // 변동성 돌파 계산
             const calculation = VolatilityCalculator.calculate(stockData, settings);
             
-            if (!calculation || !calculation.meetsConditions) {
-                return null;
+            if (!calculation) {
+                return null; // 계산 자체가 실패한 경우만 제외
             }
             
+            // 조건을 만족하지 않아도 결과에 포함 (대기 종목으로 분류될 수 있음)
             return {
                 ticker,
                 ...calculation,
@@ -516,10 +517,16 @@ class BrowserStockScanner {
         // 대기 종목 표시
         this.renderStockCards('waitingStocks', results.waitingStocks, 'waiting');
         
-        // 스캔 완료 후 자동 업데이트 시작 (설정에서 활성화된 경우)
+        // 스캔 완료 후 자동 업데이트 시작 (설정에서 활성화된 경우 + 스캔 결과가 있는 경우 + 실제 스캔이 완료된 경우만)
         const settings = StorageManager.getSettings();
         
-        if (!this.autoUpdateEnabled && settings.autoUpdateEnabled) {
+        const hasResults = (results.breakoutStocks && results.breakoutStocks.length > 0) || 
+                          (results.waitingStocks && results.waitingStocks.length > 0);
+        
+        // 실제 스캔이 완료된 경우에만 자동 업데이트 시작 (캐시 로드시에는 시작하지 않음)
+        const isFromActualScan = this.isScanning || this.lastScanResults === null;
+        
+        if (!this.autoUpdateEnabled && settings.autoUpdateEnabled && hasResults && isFromActualScan) {
             this.startAutoUpdate();
         }
     }

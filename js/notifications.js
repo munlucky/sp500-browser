@@ -106,24 +106,13 @@ class NotificationManager {
                 tag: 'breakout-alert',
                 requireInteraction: true,
                 silent: false,
-                actions: [
-                    {
-                        action: 'view',
-                        title: '확인하기',
-                        icon: this.getIconDataUrl()
-                    },
-                    {
-                        action: 'dismiss',
-                        title: '닫기'
-                    }
-                ],
+                // actions는 Service Worker 알림에서만 지원되므로 제거
                 data: {
                     type: 'breakout',
                     stocks: breakoutStocks,
                     timestamp: now,
                     url: window.location.href
-                },
-                timestamp: now
+                }
             };
             
             // 브라우저 알림 생성
