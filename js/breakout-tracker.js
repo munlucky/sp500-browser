@@ -310,6 +310,9 @@ class BreakoutTracker {
                   newBreakouts.push(breakoutData);
                   this.todayBreakouts.push(breakoutData);
                   
+                  // 돌파 데이터 저장
+                  this.saveTodayBreakouts();
+                  
                   console.log(`🚀 돌파 감지: ${ticker}`);
                   console.log(`   현재가: $${currentPrice.toFixed(2)}`);
                   console.log(`   진입가: $${watchItem.entryPrice.toFixed(2)}`);
@@ -802,6 +805,11 @@ class BreakoutTracker {
           );
           this.displayTodayBreakouts();
       }
+  }
+
+  saveTodayBreakouts() {
+      localStorage.setItem('today_breakouts', JSON.stringify(this.todayBreakouts));
+      console.log('💾 오늘의 돌파 데이터 저장됨:', this.todayBreakouts.length, '개');
   }
 
   saveOrder(order) {
