@@ -34,7 +34,7 @@ const Constants = {
     CACHE: {
         SP500_TICKERS_TTL_HOURS: 24 * 7, // 7일
         STOCK_DATA_TTL_MINUTES: 5,
-        RESULTS_TTL_MINUTES: 30,
+        RESULTS_TTL_MINUTES: 1440, // 24시간 (하루종일 유지)
         MAX_CACHE_SIZE_MB: 3
     },
     
