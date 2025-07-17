@@ -180,8 +180,18 @@ class AutoUpdater {
             const settings = this.getUpdateSettings();
             const analysisResults = await this.stockAnalyzer.analyzeStocks(updatedStocks, settings);
             
-            // UI 업데이트
-            this.uiRenderer.renderResults(analysisResults);
+            // 돌파 상태 재평가 (기존 대기 종목이 돌파했는지 확인)
+            this.checkBreakoutStatusChange(analysisResults);
+            
+            // 업데이트된 결과 가져오기
+            const updatedResults = window.browserStockScanner && window.browserStockScanner.lastScanResults ? 
+                window.browserStockScanner.lastScanResults : analysisResults;
+            
+            // 캐시 업데이트 (돌파 상태 변경 사항 반영)
+            await this.saveUpdatedResults(updatedResults);
+            
+            // UI 업데이트 (캐시 저장 완료 후)
+            this.uiRenderer.renderResults(updatedResults);
             
             this.lastUpdateTime = Date.now();
             const updateDuration = this.lastUpdateTime - updateStartTime;
@@ -193,8 +203,8 @@ class AutoUpdater {
                 duration: updateDuration,
                 tickersUpdated: currentTickers.length,
                 results: {
-                    breakoutCount: analysisResults.breakoutStocks.length,
-                    waitingCount: analysisResults.waitingStocks.length
+                    breakoutCount: updatedResults.breakoutStocks.length,
+                    waitingCount: updatedResults.waitingStocks.length
                 }
             });
             
@@ -373,6 +383,20 @@ class AutoUpdater {
     }
     
     /**
+     * 돌파 상태 변경 확인
+     * @param {Object} analysisResults - 분석 결과
+     */
+    checkBreakoutStatusChange(analysisResults) {
+        // 레거시 스캐너의 updateStockStatus 로직 호출
+        if (window.browserStockScanner && typeof window.browserStockScanner.updateStockStatus === 'function') {
+            // 최신 분석 결과로 lastScanResults 업데이트
+            window.browserStockScanner.lastScanResults = analysisResults;
+            window.browserStockScanner.updateStockStatus();
+            console.log('🔄 돌파 상태 재평가 완료');
+        }
+    }
+
+    /**
      * 자동 업데이터 상태 조회
      * @returns {Object} 현재 상태
      */
@@ -393,6 +417,28 @@ class AutoUpdater {
         };
     }
     
+    /**
+     * 업데이트된 결과 캐시 저장
+     * @param {Object} results - 저장할 결과
+     */
+    async saveUpdatedResults(results) {
+        try {
+            if (typeof StorageManager !== 'undefined' && typeof StorageManager.saveResults === 'function') {
+                // 동기적으로 캐시 저장
+                StorageManager.saveResults(results);
+                console.log('💾 자동 업데이트 결과 캐시 저장 완료');
+                
+                // 저장 완료를 보장하기 위한 짧은 대기
+                await new Promise(resolve => setTimeout(resolve, 10));
+            } else {
+                console.warn('⚠️ StorageManager를 사용할 수 없습니다');
+            }
+        } catch (error) {
+            console.error('❌ 캐시 저장 실패:', error.message);
+            throw error;
+        }
+    }
+
     /**
      * 토글 (시작/중지)
      * @param {Object} options - 시작 옵션 (시작할 때만 사용)

@@ -448,6 +448,12 @@ class UIRenderer {
             this.elements.autoUpdateProgress.style.width = `${progress.percentage}%`;
             this.elements.autoUpdateProgress.style.opacity = progress.percentage > 0 ? '1' : '0';
         }
+        
+        // 자동 업데이트 완료 처리
+        if (progress.completed === true) {
+            this.updateAutoUpdateStatus('업데이트 완료', true);
+            console.log('✅ 자동 업데이트 완료 - UI 상태 업데이트됨');
+        }
     }
     
     /**
