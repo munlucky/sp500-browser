@@ -367,6 +367,9 @@ class BreakoutTracker {
       // 화면 알림 (전략 정보 포함)
       this.showBreakoutNotification(breakoutData, entryStrategy);
       
+      // 섹터 분석 업데이트 (새로운 돌파 발생 시)
+      this.updateSectorAnalysis();
+      
       // 로그 기록
       console.log(`✅ ${breakoutData.ticker} 돌파 처리 완료 - 전략: ${entryStrategy.name}`);
   }
@@ -629,49 +632,127 @@ class BreakoutTracker {
   }
 
   displayTodayBreakouts() {
-      const container = document.getElementById('todayBreakouts');
-      if (!container) return;
-      
-      container.innerHTML = '';
-      
-      if (this.todayBreakouts.length === 0) {
-          container.innerHTML = '<div class="no-results">아직 돌파한 종목이 없습니다.</div>';
+      // 오늘의 돌파 종목 UI 제거됨 - 섹터 분석만 수행
+      if (this.todayBreakouts.length > 0) {
+          this.updateSectorAnalysis();
+      }
+  }
+
+  // 섹터 분석 업데이트
+  async updateSectorAnalysis() {
+      if (!window.sectorAnalyzer) {
+          console.warn('❌ sectorAnalyzer가 로드되지 않았습니다.');
           return;
       }
       
-      // 최신 돌파 순으로 정렬
-      const sortedBreakouts = [...this.todayBreakouts].sort((a, b) => 
-          new Date(b.breakoutTime) - new Date(a.breakoutTime)
-      );
+      if (this.todayBreakouts.length === 0) {
+          console.log('📊 돌파 종목이 없어 섹터 분석을 건너뜁니다.');
+          return;
+      }
       
-      sortedBreakouts.forEach(breakout => {
-          const card = document.createElement('div');
-          card.className = 'stock-card breakout';
+      try {
+          console.log('📊 섹터 분석 시작:', this.todayBreakouts.length, '개 돌파 종목');
           
-          const breakoutTime = new Date(breakout.breakoutTime).toLocaleTimeString('ko-KR');
+          // 섹터별 성과 계산
+          const sectorData = await window.sectorAnalyzer.calculateSectorPerformance(this.todayBreakouts);
           
-          card.innerHTML = `
-              <div class="stock-header">
-                  <h3>${breakout.ticker}</h3>
-                  <div class="breakout-badge">돌파! ${breakoutTime}</div>
-              </div>
-              <div class="price-info">
-                  <div class="current-price">$${breakout.currentPrice.toFixed(2)}</div>
-                  <div class="entry-price">진입가: $${breakout.entryPrice.toFixed(2)} (+${breakout.gain}%)</div>
-              </div>
-              <div class="targets">
-                  <div class="target stop-loss">손절: $${breakout.stopLoss.toFixed(2)}</div>
-                  <div class="target profit">목표1: $${breakout.target1.toFixed(2)}</div>
-                  <div class="target profit">목표2: $${breakout.target2.toFixed(2)}</div>
-              </div>
-          `;
+          // 섹터 성과 표시
+          this.displaySectorPerformance(sectorData);
           
-          card.onclick = () => this.openStockChart(breakout.ticker);
+          console.log('✅ 섹터 분석 업데이트 완료');
+      } catch (error) {
+          console.warn('❌ 섹터 분석 업데이트 실패:', error);
+      }
+  }
+
+  // 섹터 성과 표시
+  displaySectorPerformance(sectorData) {
+      let container = document.getElementById('sectorPerformance');
+      if (!container) {
+          // 섹터 성과 컨테이너가 없으면 breakoutStocks 컨테이너 뒤에 추가
+          const breakoutStocksSection = document.getElementById('breakoutStocks')?.parentElement;
+          if (breakoutStocksSection) {
+              const sectorContainer = document.createElement('div');
+              sectorContainer.innerHTML = `
+                  <div class="section-header">
+                      <h2>💼 섹터별 성과</h2>
+                      <div class="section-info">돌파 종목들의 섹터 전체 성과</div>
+                  </div>
+                  <div id="sectorSummary"></div>
+                  <div id="sectorPerformance" class="sector-performance-grid"></div>
+              `;
+              breakoutStocksSection.parentElement.insertBefore(sectorContainer, breakoutStocksSection.nextSibling);
+              container = document.getElementById('sectorPerformance');
+          }
+          if (!container) return;
+      }
+      
+      container.innerHTML = '';
+      
+      // 돌파 종목이 있는 섹터만 필터링 및 정렬
+      const activeSectors = Object.entries(sectorData)
+          .filter(([_, data]) => data.breakoutCount > 0)
+          .sort((a, b) => b[1].breakoutCount - a[1].breakoutCount);
+      
+      if (activeSectors.length === 0) {
+          container.innerHTML = '<div class="no-results">섹터 데이터가 없습니다.</div>';
+          return;
+      }
+      
+      // 섹터 요약 정보 먼저 표시
+      this.displaySectorSummary(activeSectors);
+      
+      // 섹터 성과 카드 생성
+      activeSectors.forEach(([sector, data]) => {
+          const card = window.sectorAnalyzer.createSectorPerformanceCard(sector, data);
           container.appendChild(card);
       });
+  }
+
+  // 섹터 요약 정보 표시
+  displaySectorSummary(activeSectors) {
+      const summaryContainer = document.getElementById('sectorSummary');
+      if (!summaryContainer) {
+          console.warn('❌ sectorSummary 컨테이너를 찾을 수 없습니다.');
+          return;
+      }
       
-      // 통계 업데이트
-      document.getElementById('breakoutToday').textContent = this.todayBreakouts.length;
+      const totalSectors = activeSectors.length;
+      const totalBreakouts = activeSectors.reduce((sum, [_, data]) => sum + data.breakoutCount, 0);
+      const topSector = activeSectors[0];
+      
+      // 섹터 전체 성과 표시
+      const positiveSectors = activeSectors.filter(([_, data]) => 
+          data.sectorPerformance?.isPositive).length;
+      const negativeSectors = totalSectors - positiveSectors;
+      
+      console.log('📊 섹터 요약 정보:', {
+          totalSectors,
+          positiveSectors,
+          negativeSectors,
+          topSector: topSector ? topSector[0] : 'N/A'
+      });
+      
+      summaryContainer.innerHTML = `
+          <div class="sector-summary">
+              <div class="summary-stat">
+                  <span class="stat-label">활성 섹터:</span>
+                  <span class="stat-value">${totalSectors}개</span>
+              </div>
+              <div class="summary-stat">
+                  <span class="stat-label">상승 섹터:</span>
+                  <span class="stat-value positive">${positiveSectors}개 📈</span>
+              </div>
+              <div class="summary-stat">
+                  <span class="stat-label">하락 섹터:</span>
+                  <span class="stat-value negative">${negativeSectors}개 📉</span>
+              </div>
+              <div class="summary-stat">
+                  <span class="stat-label">최고 섹터:</span>
+                  <span class="stat-value">${topSector ? topSector[0] : 'N/A'}</span>
+              </div>
+          </div>
+      `;
   }
 
   // 유틸리티 메서드들
@@ -804,6 +885,14 @@ class BreakoutTracker {
               new Date(item.breakoutTime).toDateString() === today
           );
           this.displayTodayBreakouts();
+          
+          // 기존 돌파 데이터가 있으면 섹터 분석 수행
+          if (this.todayBreakouts.length > 0) {
+              console.log('📊 기존 돌파 데이터 발견:', this.todayBreakouts.length, '개');
+              setTimeout(() => {
+                  this.updateSectorAnalysis();
+              }, 500); // DOM 로딩 완료 후 실행
+          }
       }
   }
 
@@ -840,6 +929,34 @@ class BreakoutTracker {
               }
           });
       }
+      
+      // 테스트용 돌파 데이터 생성 (개발용)
+      document.addEventListener('keydown', (e) => {
+          if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+              this.generateTestBreakoutData();
+          }
+      });
+  }
+
+  // 테스트용 돌파 데이터 생성 (Ctrl+Shift+T)
+  generateTestBreakoutData() {
+      const testBreakout = {
+          ticker: 'AAPL',
+          entryPrice: 150.0,
+          currentPrice: 153.5,
+          gain: '2.3',
+          breakoutTime: new Date(),
+          stopLoss: 142.5,
+          target1: 153.0,
+          target2: 157.5,
+          hasBreakout: true
+      };
+      
+      this.todayBreakouts.push(testBreakout);
+      this.saveTodayBreakouts();
+      this.updateSectorAnalysis();
+      
+      console.log('🧪 테스트 돌파 데이터 생성됨:', testBreakout.ticker);
   }
 
   initializeUI() {

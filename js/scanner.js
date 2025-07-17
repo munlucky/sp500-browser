@@ -428,7 +428,9 @@ class BrowserStockScanner {
             if (window.APIManager) {
                 const apiManager = new window.APIManager();
                 console.log(`📡 ${ticker}: API Manager로 데이터 요청...`);
-                const stockData = await apiManager.fetchStockData(ticker);
+                const stockData = await apiManager.fetchStockData(ticker, { 
+                    isAutoUpdate: this.isAutoUpdating || false 
+                });
                 
                 if (stockData) {
                     stockData.ticker = ticker;
@@ -971,7 +973,7 @@ class BrowserStockScanner {
                     const progress = Math.round(((i + 1) / allStocks.length) * 100);
                     this.updateStatus(`재확인 중... ${i + 1}/${allStocks.length} (${progress}%)`, 'scanning');
                     
-                    // 현재 주식 데이터 가져오기
+                    // 현재 주식 데이터 가져오기 (재확인 시에는 캐시 무시)
                     const stockData = await this.fetchStockData(stock.ticker);
                     
                     if (stockData) {
@@ -1130,7 +1132,9 @@ class BrowserStockScanner {
             // 전체 스캔과 동일한 API Manager 사용
             if (window.APIManager) {
                 const apiManager = new window.APIManager();
-                const stockData = await apiManager.fetchStockData(ticker);
+                const stockData = await apiManager.fetchStockData(ticker, { 
+                    isAutoUpdate: this.isAutoUpdating || false 
+                });
                 
                 if (stockData && stockData.currentPrice) {
                     return stockData.currentPrice;

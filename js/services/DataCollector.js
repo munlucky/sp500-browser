@@ -127,6 +127,7 @@ class DataCollector {
      * 여러 종목의 주식 데이터 수집
      * @param {string[]} tickers - 수집할 종목 리스트 (선택사항, 기본값: 전체 S&P 500)
      * @param {Object} options - 수집 옵션
+     * @param {boolean} options.isAutoUpdate - 자동 업데이트 여부 (캐시 무시)
      * @returns {Promise<Object[]>} 수집된 주식 데이터 배열
      */
     async collectStockData(tickers = null, options = {}) {
@@ -146,11 +147,13 @@ class DataCollector {
                 tickers = this.sp500Tickers;
             }
             
-            console.log(`📊 ${tickers.length}개 종목 데이터 수집 시작...`);
+            const updateMode = options.isAutoUpdate ? ' (자동 업데이트 - 캐시 무시)' : '';
+            console.log(`📊 ${tickers.length}개 종목 데이터 수집 시작${updateMode}...`);
             
             this.eventBus?.emit(Constants.EVENTS.DATA_COLLECTION_STARTED, {
                 type: 'stock-data',
-                total: tickers.length
+                total: tickers.length,
+                isAutoUpdate: options.isAutoUpdate || false
             });
             
             // 배치 처리로 메모리 효율성 향상
@@ -165,7 +168,8 @@ class DataCollector {
                 const batchResults = await this.collectBatch(batch, {
                     batchIndex: i,
                     totalBatches: batches.length,
-                    processedSoFar: allResults.length
+                    processedSoFar: allResults.length,
+                    options
                 });
                 
                 allResults.push(...batchResults);
@@ -237,7 +241,7 @@ class DataCollector {
                     batchIndex: batchInfo.batchIndex,
                     totalBatches: batchInfo.totalBatches
                 });
-            });
+            }, batchInfo.options);
             
             return batchResults;
             

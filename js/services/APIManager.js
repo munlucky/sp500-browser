@@ -35,29 +35,33 @@ class APIManager {
     /**
      * 주식 데이터 요청 (메인 인터페이스)
      * @param {string} ticker - 주식 티커
+     * @param {Object} options - 요청 옵션
+     * @param {boolean} options.isAutoUpdate - 자동 업데이트 여부 (캐시 무시)
      * @returns {Promise<Object>} 주식 데이터
      */
-    async fetchStockData(ticker) {
+    async fetchStockData(ticker, options = {}) {
         if (this.pendingRequests.has(ticker)) {
             throw AppError.validationError(`${ticker} 요청이 이미 진행 중입니다.`);
         }
         
-        return this.queueRequest(ticker);
+        return this.queueRequest(ticker, options);
     }
     
     /**
      * 여러 주식 데이터 배치 요청
      * @param {string[]} tickers - 주식 티커 배열
      * @param {Function} progressCallback - 진행률 콜백
+     * @param {Object} options - 요청 옵션
+     * @param {boolean} options.isAutoUpdate - 자동 업데이트 여부 (캐시 무시)
      * @returns {Promise<Object[]>} 주식 데이터 배열
      */
-    async fetchMultipleStocks(tickers, progressCallback = null) {
+    async fetchMultipleStocks(tickers, progressCallback = null, options = {}) {
         const results = [];
         let processed = 0;
         
         for (const ticker of tickers) {
             try {
-                const data = await this.fetchStockData(ticker);
+                const data = await this.fetchStockData(ticker, options);
                 results.push({ ticker, data, success: true });
                 
                 if (progressCallback) {
@@ -106,18 +110,30 @@ class APIManager {
     /**
      * 요청을 큐에 추가
      * @param {string} ticker - 주식 티커
+     * @param {Object} options - 요청 옵션
+     * @param {boolean} options.isAutoUpdate - 자동 업데이트 여부 (캐시 무시)
      * @returns {Promise<Object>}
      */
-    async queueRequest(ticker) {
-        // 오늘 날짜로 저장된 데이터가 있는지 먼저 확인
-        const todayData = this.getTodaysCachedData(ticker);
-        if (todayData) {
-            console.log(`📦 ${ticker}: 오늘 날짜 캐시 데이터 사용`);
-            return Promise.resolve(todayData);
+    async queueRequest(ticker, options = {}) {
+        // 자동 업데이트가 아닌 경우에만 캐시 데이터 확인
+        if (!options.isAutoUpdate) {
+            const todayData = this.getTodaysCachedData(ticker);
+            if (todayData) {
+                console.log(`📦 ${ticker}: 오늘 날짜 캐시 데이터 사용`);
+                return Promise.resolve(todayData);
+            }
+        } else {
+            console.log(`🔄 ${ticker}: 자동 업데이트 - 캐시 무시하고 API 호출`);
         }
         
         return new Promise((resolve, reject) => {
-            this.requestQueue.push({ ticker, resolve, reject, timestamp: Date.now() });
+            this.requestQueue.push({ 
+                ticker, 
+                resolve, 
+                reject, 
+                timestamp: Date.now(),
+                options 
+            });
             this.processQueue();
         });
     }
@@ -209,7 +225,7 @@ class APIManager {
         this.isProcessingQueue = true;
         
         while (this.requestQueue.length > 0) {
-            const { ticker, resolve, reject, retryCount = 0 } = this.requestQueue.shift();
+            const { ticker, resolve, reject, retryCount = 0, options = {} } = this.requestQueue.shift();
             
             this.pendingRequests.add(ticker);
             
@@ -219,8 +235,12 @@ class APIManager {
                 
                 const data = await this.fetchFromYahooFinance(ticker);
                 
-                // 오늘 날짜로 캐시에 저장
+                // 항상 캐시에 저장 (자동 업데이트 시에는 기존 캐시 갱신)
                 this.cacheTodaysData(ticker, data);
+                
+                if (options.isAutoUpdate) {
+                    console.log(`🔄 ${ticker}: 자동 업데이트 - 캐시 갱신 완료`);
+                }
                 
                 // 성공 시 정리
                 this.failedTickers.delete(ticker);
@@ -232,7 +252,7 @@ class APIManager {
                 
                 // 재시도 로직
                 if (retryCount < this.maxRetries) {
-                    this.addToRetryQueue({ ticker, resolve, reject, retryCount: retryCount + 1 });
+                    this.addToRetryQueue({ ticker, resolve, reject, retryCount: retryCount + 1, options });
                 } else {
                     this.failedTickers.add(ticker);
                     

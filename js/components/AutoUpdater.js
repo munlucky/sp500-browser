@@ -168,9 +168,9 @@ class AutoUpdater {
                 progress: 0
             };
             
-            console.log(`📊 ${currentTickers.length}개 종목 자동 업데이트 시작`);
+            console.log(`📊 ${currentTickers.length}개 종목 자동 업데이트 시작 (캐시 무시)`);
             
-            // 데이터 수집
+            // 데이터 수집 (캐시 무시)
             const updatedStocks = await this.dataCollector.collectStockData(currentTickers, {
                 batchSize: 5, // 자동 업데이트는 더 작은 배치
                 isAutoUpdate: true
