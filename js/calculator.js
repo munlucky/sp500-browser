@@ -65,7 +65,7 @@ class VolatilityCalculator {
             // 점수 계산
             const score = this.calculateScore({
                 volatility: volatility / 100,
-                volume,
+                yesterdayVolume: volume,
                 price: yesterdayClose,
                 gapToEntry,
                 dailyRange,
@@ -97,7 +97,7 @@ class VolatilityCalculator {
                 
                 // 분석 데이터
                 volatility: this.roundPercent(volatility),
-                volume,
+                yesterdayVolume: volume,
                 dailyRange: this.roundPrice(dailyRange),
                 gapToEntry: this.roundPrice(gapToEntry),
                 gapPercent: this.roundPercent(gapPercent),
@@ -129,17 +129,27 @@ class VolatilityCalculator {
     static validateStockData(data) {
         if (!data || typeof data !== 'object') return null;
         
+        // 데이터 정규화: volume 필드를 yesterdayVolume으로 변환 (하위 호환성)
+        const normalizedData = { ...data };
+        if (!normalizedData.yesterdayVolume && normalizedData.volume) {
+            normalizedData.yesterdayVolume = normalizedData.volume;
+        }
+        
         const required = ['currentPrice', 'yesterdayClose', 'yesterdayHigh', 'yesterdayLow', 'yesterdayVolume'];
         
         for (const field of required) {
-            if (!(field in data) || !this.isValidNumber(data[field])) {
-                console.error(`잘못된 주식 데이터: ${field} 필드가 유효하지 않음`);
+            if (!(field in normalizedData) || !this.isValidNumber(normalizedData[field])) {
+                console.error(`잘못된 주식 데이터: ${field} 필드가 유효하지 않음`, { 
+                    field, 
+                    value: normalizedData[field],
+                    originalData: data 
+                });
                 return null;
             }
         }
         
         // 논리적 검증
-        const { yesterdayHigh, yesterdayLow, yesterdayClose, currentPrice, yesterdayVolume: volume } = data;
+        const { yesterdayHigh, yesterdayLow, yesterdayClose, currentPrice, yesterdayVolume: volume } = normalizedData;
         
         if (yesterdayHigh < yesterdayLow) {
             console.error('논리 오류: 고가가 저가보다 낮음');
@@ -161,7 +171,7 @@ class VolatilityCalculator {
             yesterdayClose: Number(yesterdayClose),
             yesterdayHigh: Number(yesterdayHigh),
             yesterdayLow: Number(yesterdayLow),
-            volume: Number(volume)
+            yesterdayVolume: Number(volume)
         };
     }
     
@@ -201,13 +211,13 @@ class VolatilityCalculator {
             }
             
             // 거래량 점수 - 개선된 계층
-            if (data.volume >= 10000000) {
+            if (data.yesterdayVolume >= 10000000) {
                 score += 30; // 초고거래량
-            } else if (data.volume >= 5000000) {
+            } else if (data.yesterdayVolume >= 5000000) {
                 score += 25; // 고거래량
-            } else if (data.volume >= 2000000) {
+            } else if (data.yesterdayVolume >= 2000000) {
                 score += 20; // 중거래량
-            } else if (data.volume >= 1000000) {
+            } else if (data.yesterdayVolume >= 1000000) {
                 score += 15; // 기본거래량
             } else {
                 score += 5; // 저거래량

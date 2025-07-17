@@ -129,7 +129,7 @@ class APIManager {
      */
     getTodaysCachedData(ticker) {
         try {
-            const today = new Date().toDateString(); // "Wed Jul 17 2025" 형식
+            const today = new Date().toISOString().split('T')[0]; // "2025-07-17" 형식 (ISO 표준)
             const cacheKey = `stock_${ticker}_${today}`;
             
             const cachedData = StorageManager.getCachedData(cacheKey);
@@ -154,7 +154,7 @@ class APIManager {
      */
     cacheTodaysData(ticker, data) {
         try {
-            const today = new Date().toDateString(); // "Wed Jul 17 2025" 형식
+            const today = new Date().toISOString().split('T')[0]; // "2025-07-17" 형식 (ISO 표준)
             const cacheKey = `stock_${ticker}_${today}`;
             
             // 24시간(1440분) 동안 캐시 유지 - 하루가 지나면 자동 삭제
@@ -164,6 +164,37 @@ class APIManager {
             
         } catch (error) {
             console.warn(`⚠️ ${ticker}: 캐시 저장 실패:`, error.message);
+        }
+    }
+    
+    /**
+     * 기존 잘못된 형식의 캐시 키들을 정리
+     * @returns {number} 정리된 캐시 수
+     */
+    static cleanupOldCacheKeys() {
+        try {
+            console.log('🧹 기존 캐시 키 형식 정리 시작...');
+            
+            let cleanedCount = 0;
+            const keys = Object.keys(localStorage);
+            
+            // 잘못된 형식 패턴: "stock_TICKER_Wed Jul 17 2025" 같은 형식
+            const oldFormatPattern = /^stock_[A-Z]+_[A-Za-z]{3}\s[A-Za-z]{3}\s\d{1,2}\s\d{4}$/;
+            
+            for (const key of keys) {
+                if (oldFormatPattern.test(key)) {
+                    console.log(`🗑️ 구 형식 캐시 키 삭제: ${key}`);
+                    localStorage.removeItem(key);
+                    cleanedCount++;
+                }
+            }
+            
+            console.log(`✅ ${cleanedCount}개의 구 형식 캐시 키 정리 완료`);
+            return cleanedCount;
+            
+        } catch (error) {
+            console.error('❌ 캐시 키 정리 실패:', error);
+            return 0;
         }
     }
     

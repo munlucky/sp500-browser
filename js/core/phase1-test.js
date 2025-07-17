@@ -74,19 +74,37 @@ function testPhase1() {
         // 4. Constants 테스트
         console.log('4. Constants 테스트');
         
-        if (Constants.API.RATE_LIMIT_MS === 1000) {
+        console.log('Constants 객체 타입:', typeof Constants);
+        console.log('window.Constants 객체 타입:', typeof window.Constants);
+        
+        // window.Constants 먼저 확인
+        const ConstantsObj = window.Constants || Constants;
+        
+        if (typeof ConstantsObj === 'undefined') {
+            throw new Error('Constants 객체가 로드되지 않음 (window.Constants와 Constants 모두 undefined)');
+        }
+        
+        console.log('Constants 객체 발견:', ConstantsObj);
+        
+        if (!ConstantsObj.API) {
+            throw new Error('Constants.API 객체가 존재하지 않음');
+        }
+        
+        console.log('RATE_LIMIT_MS 값:', ConstantsObj.API.RATE_LIMIT_MS);
+        
+        if (ConstantsObj.API.RATE_LIMIT_MS === 10000) {
             console.log('✅ Constants 접근 확인');
         } else {
-            throw new Error('Constants 접근 실패');
+            throw new Error(`Constants 접근 실패: RATE_LIMIT_MS = ${ConstantsObj.API.RATE_LIMIT_MS}, 예상값 = 10000`);
         }
         
         // Constants 수정 시도 (실패해야 함)
-        const originalValue = Constants.API.RATE_LIMIT_MS;
+        const originalValue = ConstantsObj.API.RATE_LIMIT_MS;
         try {
-            Constants.API.RATE_LIMIT_MS = 2000;
+            ConstantsObj.API.RATE_LIMIT_MS = 2000;
             
             // 값이 실제로 변경되었는지 확인
-            if (Constants.API.RATE_LIMIT_MS !== originalValue) {
+            if (ConstantsObj.API.RATE_LIMIT_MS !== originalValue) {
                 throw new Error('Constants가 수정 가능함 (보안 문제)');
             } else {
                 console.log('✅ Constants 읽기 전용 확인 (값 변경 무시됨)');

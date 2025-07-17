@@ -197,7 +197,7 @@ class BrowserStockScanner {
                             현재가: stock.currentPrice.toFixed(2),
                             진입가: stock.entryPrice.toFixed(2),
                             변동률: stock.volatility.toFixed(1) + '%',
-                            거래량: stock.volume.toLocaleString(),
+                            거래량: (stock.yesterdayVolume || 0).toLocaleString(),
                             돌파여부: stock.isBreakout ? '✅' : '❌',
                             조건만족: stock.meetsConditions ? '✅' : '❌'
                         });
@@ -298,70 +298,6 @@ class BrowserStockScanner {
         }
     }
 
-    async smartScanStocks() {
-        if (this.isScanning) return;
-        
-        console.log('🚀 스마트 스캔 전략 시작...');
-        this.isScanning = true;
-        this.updateStatus('스마트 스캔 중...', 'scanning');
-        
-        
-        
-        try {
-            // 스마트 스캐너의 적응형 스캔 사용
-            const results = await window.smartScanner.adaptiveScan(this.sp500Tickers);
-            
-            // 기본 결과 구조로 변환
-            const formattedResults = {
-                breakoutStocks: results.breakoutStocks || [],
-                waitingStocks: results.waitingStocks || [],
-                totalScanned: results.totalScanned || 0,
-                errors: results.errors || 0,
-                strategy: results.strategy || 'adaptive',
-                timestamp: new Date().toISOString()
-            };
-            
-            // 로컬 스토리지에 저장
-            StorageManager.saveResults(formattedResults);
-            
-            // UI 업데이트
-            this.displayResults(formattedResults);
-            
-            // 돌파 알림
-            if (formattedResults.breakoutStocks.length > 0 && typeof NotificationManager !== 'undefined') {
-                NotificationManager.sendBreakoutAlert(formattedResults.breakoutStocks);
-            }
-            
-            const statusMessage = `스마트 스캔 완료 (${results.strategy}): ${formattedResults.totalScanned}개 스캔 ` +
-                `(돌파: ${formattedResults.breakoutStocks.length}, 대기: ${formattedResults.waitingStocks.length})`;
-            
-            console.log(`✅ ${statusMessage}`);
-            this.updateStatus(statusMessage, 'completed');
-            
-            // 스마트 스캔 완료 후 총 조회수 로그
-            if (window.logger) {
-                window.logger.success(`스마트 스캔 완료: 총 ${formattedResults.totalScanned}개 종목 조회 완료`);
-            }
-            
-            // 진행 상황 최종 업데이트
-            this.updateProgressDisplay(formattedResults.totalScanned, formattedResults.totalScanned, '완료', 'completed', formattedResults);
-            
-            
-        } catch (error) {
-            console.error('❌ 스마트 스캔 중 오류:', error);
-            this.updateStatus('스마트 스캔 실패 - 기본 스캔으로 전환', 'error');
-            
-            
-            // 에러 시 기본 스캔으로 폴백
-            setTimeout(() => {
-                this.scanStocks();
-            }, 2000);
-            
-        } finally {
-            this.isScanning = false;
-            
-        }
-    }
 
     async analyzeStock(ticker, settings, preLoadedData = null) {
         try {
@@ -410,7 +346,7 @@ class BrowserStockScanner {
                         yesterdayClose: parseFloat(yesterday['4. close']),
                         yesterdayHigh: parseFloat(yesterday['2. high']),
                         yesterdayLow: parseFloat(yesterday['3. low']),
-                        volume: parseInt(yesterday['5. volume'])
+                        yesterdayVolume: parseInt(yesterday['5. volume'])
                     };
                 } else {
                     console.warn(`❌ ${ticker}: 지원되지 않는 데이터 형식`);
@@ -477,7 +413,7 @@ class BrowserStockScanner {
             yesterdayClose,
             yesterdayHigh,
             yesterdayLow,
-            volume: Math.floor(volume)
+            yesterdayVolume: Math.floor(volume)
         };
     }
 
@@ -619,7 +555,7 @@ class BrowserStockScanner {
                 </div>
                 <div class="stats">
                     <span>변동률: ${(stock.volatility || 0).toFixed(1)}%</span>
-                    <span>거래량: ${this.formatNumber(stock.volume || stock.yesterdayVolume || 0)}</span>
+                    <span>거래량: ${this.formatNumber(stock.yesterdayVolume || 0)}</span>
                     <span>점수: ${stock.score || 0}/100</span>
                 </div>
                 ${strategyDisplay}
@@ -728,18 +664,12 @@ class BrowserStockScanner {
     }
 
     bindEvents() {
-        // 전체 스캔 버튼 (기존 기능)
+        // 전체 스캔 버튼 (통합된 스캔 기능)
         const scanBtn = document.getElementById('scanBtn');
         if (scanBtn) {
             scanBtn.addEventListener('click', () => {
-                // 스마트 스캐너 사용 여부 확인
-                if (window.smartScanner && !this.demoMode) {
-                    console.log('🧠 스마트 스캔 전략 사용');
-                    this.smartScanStocks();
-                } else {
-                    console.log('📊 기본 전체 스캔 사용');
-                    this.scanStocks();
-                }
+                console.log('📊 주식 스캔 시작');
+                this.scanStocks();
             });
         }
         

@@ -19,6 +19,14 @@ class App {
             // 캐시 정리 (어제 날짜 데이터 삭제)
             StorageManager.initializeCacheCleanup();
             
+            // 구 형식 캐시 키 정리
+            if (typeof APIManager !== 'undefined' && APIManager.cleanupOldCacheKeys) {
+                const cleanedKeys = APIManager.cleanupOldCacheKeys();
+                if (cleanedKeys > 0) {
+                    console.log(`🧹 구 형식 캐시 키 ${cleanedKeys}개 정리됨`);
+                }
+            }
+            
             // 스캐너 초기화
             try {
                 console.log('📡 스캐너 초기화 시작...');
