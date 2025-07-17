@@ -461,26 +461,26 @@ function printTestResults(results) {
     }
 }
 
-// DOM 로드 후 자동 실행
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        // console.log('🔬 통합 테스트 자동 실행 시작...');
-        runIntegrationTest().then(results => {
-            // 테스트 결과를 전역에 저장
-            window.integrationTestResults = results;
-            
-            // 성공률에 따른 UI 업데이트
-            const successRate = (results.passed / results.total) * 100;
-            if (successRate >= 90) {
-                document.body.classList.add('refactoring-success');
-            } else if (successRate >= 80) {
-                document.body.classList.add('refactoring-warning');
-            } else {
-                document.body.classList.add('refactoring-error');
-            }
-        });
-    }, 3000); // 3초 후 실행 (다른 초기화 완료 대기)
-});
+// DOM 로드 후 자동 실행 (비활성화됨)
+// document.addEventListener('DOMContentLoaded', () => {
+//     setTimeout(() => {
+//         // console.log('🔬 통합 테스트 자동 실행 시작...');
+//         runIntegrationTest().then(results => {
+//             // 테스트 결과를 전역에 저장
+//             window.integrationTestResults = results;
+//             
+//             // 성공률에 따른 UI 업데이트
+//             const successRate = (results.passed / results.total) * 100;
+//             if (successRate >= 90) {
+//                 document.body.classList.add('refactoring-success');
+//             } else if (successRate >= 80) {
+//                 document.body.classList.add('refactoring-warning');
+//             } else {
+//                 document.body.classList.add('refactoring-error');
+//             }
+//         });
+//     }, 3000); // 3초 후 실행 (다른 초기화 완료 대기)
+// });
 
 // 전역으로 노출
 window.runIntegrationTest = runIntegrationTest;

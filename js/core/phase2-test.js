@@ -133,10 +133,14 @@ function testPhase2() {
 }
 
 /**
- * 실제 API 테스트 (개발 모드에서만 실행)
+ * 실제 API 테스트 (비활성화됨)
  * 실제 Yahoo Finance API를 호출하여 APIManager 동작 확인
  */
 async function testAPIManagerLive() {
+    console.log('⚠️ 실제 API 테스트가 비활성화되었습니다.');
+    return; // 즉시 종료
+    
+    // 이하 코드는 실행되지 않음
     console.log('🔗 APIManager 실제 API 테스트 시작...');
     
     try {
@@ -193,12 +197,12 @@ if (false && window.location.hostname === 'localhost' || window.location.hostnam
             // console.log('🚀 Phase 2 자동 테스트 실행');
             testPhase2();
             
-            // 실제 API 테스트는 사용자 확인 후 실행
-            setTimeout(() => {
-                if (confirm('실제 API 테스트를 실행하시겠습니까? (인터넷 연결 필요)')) {
-                    testAPIManagerLive();
-                }
-            }, 2000);
+            // 실제 API 테스트 호출 부분 비활성화됨
+            // setTimeout(() => {
+            //     if (confirm('실제 API 테스트를 실행하시겠습니까? (인터넷 연결 필요)')) {
+            //         testAPIManagerLive();
+            //     }
+            // }, 2000);
         }, 1000);
     });
 }

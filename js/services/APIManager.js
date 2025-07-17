@@ -109,10 +109,62 @@ class APIManager {
      * @returns {Promise<Object>}
      */
     async queueRequest(ticker) {
+        // 오늘 날짜로 저장된 데이터가 있는지 먼저 확인
+        const todayData = this.getTodaysCachedData(ticker);
+        if (todayData) {
+            console.log(`📦 ${ticker}: 오늘 날짜 캐시 데이터 사용`);
+            return Promise.resolve(todayData);
+        }
+        
         return new Promise((resolve, reject) => {
             this.requestQueue.push({ ticker, resolve, reject, timestamp: Date.now() });
             this.processQueue();
         });
+    }
+
+    /**
+     * 오늘 날짜로 캐시된 데이터 조회
+     * @param {string} ticker - 주식 티커
+     * @returns {Object|null} 캐시된 데이터 또는 null
+     */
+    getTodaysCachedData(ticker) {
+        try {
+            const today = new Date().toDateString(); // "Wed Jul 17 2025" 형식
+            const cacheKey = `stock_${ticker}_${today}`;
+            
+            const cachedData = StorageManager.getCachedData(cacheKey);
+            
+            if (cachedData) {
+                console.log(`✅ ${ticker}: 오늘(${today}) 캐시 데이터 발견`);
+                return cachedData;
+            }
+            
+            return null;
+            
+        } catch (error) {
+            console.warn(`⚠️ ${ticker}: 캐시 확인 실패:`, error.message);
+            return null;
+        }
+    }
+
+    /**
+     * 오늘 날짜로 데이터를 캐시에 저장
+     * @param {string} ticker - 주식 티커
+     * @param {Object} data - 저장할 데이터
+     */
+    cacheTodaysData(ticker, data) {
+        try {
+            const today = new Date().toDateString(); // "Wed Jul 17 2025" 형식
+            const cacheKey = `stock_${ticker}_${today}`;
+            
+            // 24시간(1440분) 동안 캐시 유지 - 하루가 지나면 자동 삭제
+            StorageManager.cacheData(cacheKey, data, 1440);
+            
+            console.log(`💾 ${ticker}: 오늘(${today}) 데이터 캐시에 저장`);
+            
+        } catch (error) {
+            console.warn(`⚠️ ${ticker}: 캐시 저장 실패:`, error.message);
+        }
     }
     
     /**
@@ -135,6 +187,9 @@ class APIManager {
                 await this.respectRateLimit();
                 
                 const data = await this.fetchFromYahooFinance(ticker);
+                
+                // 오늘 날짜로 캐시에 저장
+                this.cacheTodaysData(ticker, data);
                 
                 // 성공 시 정리
                 this.failedTickers.delete(ticker);
