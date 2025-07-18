@@ -1,3 +1,7 @@
 node_modules/
-.history
+.history/
 coverage/
+*.backup
+*.log
+*.tmp
+.DS_Store
