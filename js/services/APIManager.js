@@ -25,7 +25,7 @@ class APIManager {
         this.retryDelay = 2000;
         
         // API 키 관리 (기존 로직 유지)
-        this.apiKeys = ['VVTMQ91XVOYZSYFR', 'demo'];
+        this.apiKeys = ['demo'];
         this.currentKeyIndex = 0;
         this.requestCounts = {};
         

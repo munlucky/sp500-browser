@@ -25,6 +25,8 @@
 - **1분 간격 업데이트**: 전체 스캔 없이 필요한 종목만 업데이트
 - **동적 상태 변경**: 대기 종목이 돌파 시 자동 상태 변경
 - **API 절약**: 500번 → 10-50번으로 대폭 감소
+- **스마트 캐싱**: 돌파/대기 종목 자동 캐시 처리
+- **Yahoo Finance 연결**: 안정적인 데이터 소스 연결 보장
 
 ### 📱 Progressive Web App (PWA)
 - **오프라인 지원**: 캐시된 데이터로 오프라인에서도 분석 가능
@@ -83,6 +85,12 @@ http://localhost:8000
 - **CSS3**: Flexbox, Grid, 반응형 디자인
 - **HTML5**: 시맨틱 마크업, PWA 지원
 
+### 아키텍처
+- **서비스 계층**: APIManager, DataCollector, Scanner, StockAnalyzer, StorageManager
+- **컴포넌트 계층**: AutoUpdater, DashboardComponent, NotificationComponent, SettingsComponent, UIRenderer
+- **핵심 계층**: DIContainer, EventBus, ErrorHandler, 호환성 레이어
+- **테스트 인프라**: Jest 기반 유닛 테스트, 통합 테스트 자동화
+
 ### 데이터 소스
 - **Yahoo Finance API**: 실시간 주식 데이터 (기본 소스)
 - **CORS 프록시**: `api.allorigins.win`을 통한 CORS 우회
@@ -91,8 +99,9 @@ http://localhost:8000
 
 ### 저장 시스템
 - **Local Storage**: 설정, 스캔 결과, 로그 데이터 저장
-- **캐시 시스템**: 7일 TTL로 S&P 500 종목 리스트 캐시
+- **캐시 시스템**: 7일 TTL로 S&P 500 종목 리스트 캐시, 돌파/대기 종목 캐시
 - **설정 관리**: 사용자 설정 자동 저장/복원
+- **자동 캐시 정리**: 어제 날짜 데이터 자동 삭제
 
 ## 📊 코드 구조
 
@@ -100,120 +109,262 @@ http://localhost:8000
 ```
 sp500-browser/
 ├── index.html                 # 메인 HTML 파일
+├── index-production.html      # 프로덕션 빌드용 HTML
+├── package.json              # NPM 의존성 및 스크립트
+├── jest.config.js            # Jest 테스트 설정
+├── claude-code-review.yml    # 코드 리뷰 자동화 설정
 ├── css/
 │   └── style.css              # 스타일시트
 ├── js/
-│   ├── scanner.js             # 메인 스캐너 로직
+│   ├── app.js                 # 앱 메인 초기화 및 이벤트 관리
+│   ├── scanner.js             # 메인 스캐너 로직 (레거시)
 │   ├── calculator.js          # 변동성 계산 로직
-│   ├── storage.js             # 로컬 스토리지 관리
-│   ├── api-manager.js         # API 호출 관리
-│   ├── logger.js              # 로깅 시스템
-│   ├── smart-scanner.js       # 스마트 스캔 전략
 │   ├── breakout-tracker.js    # 돌파 추적 시스템
-│   └── notifications.js       # 알림 시스템
+│   ├── logger.js              # 로깅 시스템
+│   ├── notifications.js       # 알림 시스템
+│   ├── sector-analyzer.js     # 섹터별 분석 도구
+│   ├── services/              # 서비스 계층
+│   │   ├── APIManager.js      # API 호출 관리
+│   │   ├── DataCollector.js   # 데이터 수집 서비스
+│   │   ├── Scanner.js         # 스캔 서비스
+│   │   ├── StockAnalyzer.js   # 주식 분석 서비스
+│   │   └── StorageManager.js  # 저장소 관리 서비스
+│   ├── components/            # UI 컴포넌트
+│   │   ├── AutoUpdater.js     # 자동 업데이트 컴포넌트
+│   │   ├── DashboardComponent.js # 대시보드 컴포넌트
+│   │   ├── NotificationComponent.js # 알림 컴포넌트
+│   │   ├── SettingsComponent.js # 설정 컴포넌트
+│   │   └── UIRenderer.js      # UI 렌더링 컴포넌트
+│   ├── core/                  # 핵심 시스템
+│   │   ├── DIContainer.js     # 의존성 주입 컨테이너
+│   │   ├── EventBus.js        # 이벤트 버스 시스템
+│   │   ├── compatibility-layer.js # 호환성 레이어
+│   │   ├── integration-test.js # 통합 테스트
+│   │   ├── phase1-test.js     # 1단계 테스트
+│   │   ├── phase2-test.js     # 2단계 테스트
+│   │   └── phase3-test.js     # 3단계 테스트
+│   ├── errors/                # 에러 처리
+│   │   ├── AppError.js        # 앱 에러 클래스
+│   │   └── ErrorHandler.js    # 에러 핸들러
+│   ├── tests/                 # 개발 도구
+│   │   ├── development-tools.js # 개발 도구
+│   │   └── test-cleanup.js    # 테스트 정리 도구
+│   └── utils/                 # 유틸리티
+│       ├── constants.js       # 상수 정의
+│       └── index.js           # 유틸리티 인덱스
+├── tests/                     # Jest 테스트 파일
+│   ├── README.md              # 테스트 문서
+│   ├── core-features.test.js  # 핵심 기능 테스트
+│   └── simple.test.js         # 간단한 테스트
+├── icons/                     # PWA 아이콘
 ├── sw.js                      # Service Worker (PWA)
 ├── manifest.json              # Web App Manifest
 └── README.md                  # 프로젝트 문서
 ```
 
-### 핵심 클래스
+### 핵심 아키텍처
 
-#### 1. StockScanner (`scanner.js`)
-메인 스캐너 클래스로 전체 시스템을 관리합니다.
+#### 1. App (`app.js`)
+앱의 메인 초기화 및 이벤트 관리를 담당합니다.
 
 ```javascript
-class StockScanner {
+class App {
     constructor() {
-        this.sp500Tickers = [];        // S&P 500 종목 리스트
-        this.demoMode = true;          // 데모 모드 플래그
-        this.isScanning = false;       // 스캔 중 상태
-        this.autoUpdateEnabled = false; // 자동 업데이트 상태
-        this.lastScanResults = null;   // 마지막 스캔 결과
+        this.scanner = null;
+        this.breakoutTracker = null;
+        this.isInitialized = false;
     }
 
-    // 스마트 스캔 실행
-    async smartScanStocks() {
-        const results = await window.smartScanner.adaptiveScan(this.sp500Tickers);
-        this.displayResults(results);
-        this.lastScanResults = results;
-        StorageManager.saveResults(results);
-    }
-
-    // 주식 데이터 가져오기
-    async fetchStockData(ticker) {
-        if (this.demoMode) {
-            return this.generateDemoData(ticker);
-        }
-        // Yahoo Finance API 호출
-        const apiManager = new window.APIManager();
-        return await apiManager.fetchStockData(ticker);
-    }
-
-    // 주식 분석 실행
-    async analyzeStock(ticker, settings, preLoadedData = null) {
-        // 데이터 가져오기 (중복 호출 방지)
-        const stockData = preLoadedData || await this.fetchStockData(ticker);
+    async init() {
+        // 브라우저 호환성 확인
+        this.checkBrowserCompatibility();
         
-        // 변동성 계산
-        const calculation = VolatilityCalculator.calculate(stockData, settings);
+        // 필수 클래스 로드 확인
+        this.checkRequiredClasses();
         
-        // 결과 반환
-        return {
-            ticker,
-            currentPrice: stockData.currentPrice,
-            entryPrice: calculation.entryPrice,
-            breakoutSignal: calculation.hasBreakout ? 'breakout' : 'waiting'
-        };
+        // 캐시된 결과 로드
+        this.loadCachedResults();
+        
+        // 캐시 정리 (어제 날짜 데이터 삭제)
+        StorageManager.initializeCacheCleanup();
+        
+        // 스캐너 초기화
+        this.scanner = await initScanner();
+        
+        // 돌파 추적 시스템 초기화
+        this.breakoutTracker = new BreakoutTracker();
+        
+        // 자동 업데이트 복원
+        this.restoreAutoUpdateState();
+        
+        this.isInitialized = true;
     }
 }
 ```
 
-#### 2. SmartScanner (`smart-scanner.js`)
-효율적인 스캔 전략을 관리합니다.
+#### 2. 서비스 계층 (`services/`)
+비즈니스 로직을 담당하는 서비스들입니다.
 
 ```javascript
-class SmartScanner {
+// APIManager.js - API 호출 관리
+class APIManager {
     constructor() {
-        this.batchSizes = {
-            premium: 500,  // 배치 크기
-            standard: 100,
-            basic: 50
-        };
+        this.cacheManager = new CacheManager();
+        this.rateLimiter = new RateLimiter();
     }
 
-    // 적응형 스캔 실행
-    async adaptiveScan(allTickers) {
-        const strategy = this.determineOptimalStrategy();
-        const results = await this.scanInBatches(allTickers, strategy.batchSize);
-        return results;
-    }
-
-    // 배치 스캔 실행
-    async scanInBatches(tickers, batchSize = 50) {
-        const results = { breakoutStocks: [], waitingStocks: [], errors: 0 };
+    async fetchStockData(ticker) {
+        // 캐시 확인 → API 호출 → 결과 캐싱
+        const cachedData = await this.cacheManager.get(ticker);
+        if (cachedData) return cachedData;
         
-        for (let batchIndex = 0; batchIndex < Math.ceil(tickers.length / batchSize); batchIndex++) {
-            const batchTickers = tickers.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
+        const data = await this.rateLimiter.execute(() => 
+            this.fetchFromYahooFinance(ticker)
+        );
+        
+        await this.cacheManager.set(ticker, data);
+        return data;
+    }
+}
+
+// Scanner.js - 스캔 서비스
+class Scanner {
+    constructor(apiManager, stockAnalyzer) {
+        this.apiManager = apiManager;
+        this.stockAnalyzer = stockAnalyzer;
+    }
+
+    async scanStocks(tickers, settings) {
+        const results = { breakoutStocks: [], waitingStocks: [] };
+        
+        for (const ticker of tickers) {
+            const stockData = await this.apiManager.fetchStockData(ticker);
+            const analysis = await this.stockAnalyzer.analyze(stockData, settings);
             
-            // 순차 처리 (429 에러 방지)
-            for (let i = 0; i < batchTickers.length; i++) {
-                const ticker = batchTickers[i];
-                
-                if (i > 0) await this.delay(1000); // 1초 딜레이
-                
-                const stockData = await window.stockScanner.fetchStockData(ticker);
-                if (stockData) {
-                    const result = await window.stockScanner.analyzeStock(ticker, settings, stockData);
-                    if (result?.breakoutSignal === 'breakout') {
-                        results.breakoutStocks.push(result);
-                    } else if (result?.breakoutSignal === 'waiting') {
-                        results.waitingStocks.push(result);
-                    }
-                }
+            if (analysis.hasBreakout) {
+                results.breakoutStocks.push(analysis);
+            } else if (analysis.isNearBreakout) {
+                results.waitingStocks.push(analysis);
             }
         }
         
         return results;
+    }
+}
+```
+
+#### 3. 컴포넌트 계층 (`components/`)
+UI 컴포넌트들을 관리합니다.
+
+```javascript
+// DashboardComponent.js - 대시보드 UI
+class DashboardComponent {
+    constructor(eventBus) {
+        this.eventBus = eventBus;
+        this.setupEventListeners();
+    }
+
+    render(data) {
+        this.renderBreakoutStocks(data.breakoutStocks);
+        this.renderWaitingStocks(data.waitingStocks);
+        this.updateStats(data);
+    }
+
+    setupEventListeners() {
+        this.eventBus.on('scan-complete', (data) => this.render(data));
+        this.eventBus.on('breakout-detected', (stock) => this.highlightBreakout(stock));
+    }
+}
+
+// AutoUpdater.js - 자동 업데이트 컴포넌트
+class AutoUpdater {
+    constructor(scanner, eventBus) {
+        this.scanner = scanner;
+        this.eventBus = eventBus;
+        this.isRunning = false;
+        this.interval = null;
+    }
+
+    start() {
+        if (this.isRunning) return;
+        
+        this.isRunning = true;
+        this.interval = setInterval(() => {
+            this.performUpdate();
+        }, 60000); // 1분마다
+    }
+
+    async performUpdate() {
+        const trackedStocks = StorageManager.getTrackedStocks();
+        const updates = await this.scanner.quickScan(trackedStocks);
+        
+        this.eventBus.emit('auto-update-complete', updates);
+    }
+}
+```
+
+#### 4. 핵심 시스템 (`core/`)
+앱의 핵심 인프라를 제공합니다.
+
+```javascript
+// DIContainer.js - 의존성 주입
+class DIContainer {
+    constructor() {
+        this.dependencies = new Map();
+    }
+
+    register(name, factory) {
+        this.dependencies.set(name, { factory, instance: null });
+    }
+
+    resolve(name) {
+        const dep = this.dependencies.get(name);
+        if (!dep) throw new Error(`Dependency ${name} not found`);
+        
+        if (!dep.instance) {
+            dep.instance = dep.factory();
+        }
+        
+        return dep.instance;
+    }
+}
+
+// EventBus.js - 이벤트 시스템
+class EventBus {
+    constructor() {
+        this.listeners = new Map();
+    }
+
+    on(event, callback) {
+        if (!this.listeners.has(event)) {
+            this.listeners.set(event, []);
+        }
+        this.listeners.get(event).push(callback);
+    }
+
+    emit(event, data) {
+        const callbacks = this.listeners.get(event) || [];
+        callbacks.forEach(callback => callback(data));
+    }
+}
+
+// ErrorHandler.js - 에러 처리
+class ErrorHandler {
+    static handle(error, context = '') {
+        const errorInfo = {
+            message: error.message,
+            stack: error.stack,
+            context,
+            timestamp: new Date().toISOString()
+        };
+        
+        console.error('🚨 Error:', errorInfo);
+        
+        // 에러 로깅 및 리포팅
+        Logger.error('Application Error', errorInfo);
+        
+        // 사용자 친화적 에러 메시지 표시
+        this.showUserFriendlyError(error);
     }
 }
 ```
@@ -390,35 +541,121 @@ checkBreakoutTransition(stock) {
 
 ## 🧪 테스트 시스템
 
+### Jest 기반 테스트 환경
+프로젝트는 Jest를 사용한 자동화된 테스트 환경을 구축했습니다.
+
+```bash
+# 테스트 실행
+npm test
+
+# 테스트 감시 모드 (개발 중)
+npm run test:watch
+
+# 코드 커버리지 확인
+npm run test:coverage
+```
+
+### 테스트 구조
+```
+tests/
+├── core-features.test.js    # 핵심 기능 테스트
+├── simple.test.js           # 간단한 유닛 테스트
+└── README.md                # 테스트 문서
+
+js/core/
+├── integration-test.js      # 통합 테스트
+├── phase1-test.js           # 1단계 테스트 (초기화)
+├── phase2-test.js           # 2단계 테스트 (스캔)
+└── phase3-test.js           # 3단계 테스트 (자동 업데이트)
+```
+
 ### 통합 테스트
-앱 실행 시 자동으로 주요 기능들을 테스트합니다.
+앱 실행 시 단계별로 기능을 테스트합니다.
 
 ```javascript
-// 데이터 플로우 테스트
-async function testDataFlow() {
-    // Scanner 인스턴스 확인
-    const hasScanner = typeof window.stockScanner !== 'undefined';
+// Phase 1: 초기화 테스트
+async function testInitialization() {
+    // 필수 클래스 로드 확인
+    const requiredClasses = ['App', 'Scanner', 'APIManager', 'StorageManager'];
     
-    // S&P 500 종목 로드 확인
-    const hasTickers = Array.isArray(window.stockScanner.sp500Tickers) && 
-                      window.stockScanner.sp500Tickers.length > 0;
+    for (const className of requiredClasses) {
+        if (typeof window[className] === 'undefined') {
+            throw new Error(`${className} 클래스가 로드되지 않았습니다.`);
+        }
+    }
     
-    // 변동성 계산 테스트
-    const testData = {
-        currentPrice: 150,
-        yesterdayClose: 148,
-        yesterdayHigh: 152,
-        yesterdayLow: 145,
-        volume: 1000000
-    };
+    // 의존성 주입 컨테이너 테스트
+    const container = new DIContainer();
+    container.register('apiManager', () => new APIManager());
     
-    const calculation = VolatilityCalculator.calculate(testData, {
+    const apiManager = container.resolve('apiManager');
+    return apiManager instanceof APIManager;
+}
+
+// Phase 2: 스캔 기능 테스트
+async function testScanningFeatures() {
+    const scanner = new Scanner();
+    
+    // 테스트 데이터로 스캔 실행
+    const testTickers = ['AAPL', 'GOOGL', 'MSFT'];
+    const results = await scanner.scanStocks(testTickers, {
         volatilityMax: 0.08,
-        minVolume: 500000
+        minVolume: 1000000
     });
     
-    return calculation && typeof calculation.entryPrice === 'number';
+    return results && 
+           Array.isArray(results.breakoutStocks) && 
+           Array.isArray(results.waitingStocks);
 }
+
+// Phase 3: 자동 업데이트 테스트
+async function testAutoUpdateSystem() {
+    const eventBus = new EventBus();
+    const autoUpdater = new AutoUpdater(scanner, eventBus);
+    
+    // 이벤트 리스너 테스트
+    let eventReceived = false;
+    eventBus.on('auto-update-complete', () => {
+        eventReceived = true;
+    });
+    
+    // 자동 업데이트 실행
+    await autoUpdater.performUpdate();
+    
+    return eventReceived;
+}
+```
+
+### 에러 처리 테스트
+```javascript
+// 에러 시나리오 테스트
+describe('Error Handling', () => {
+    test('API 호출 실패 시 적절한 에러 처리', async () => {
+        const apiManager = new APIManager();
+        
+        // 잘못된 티커로 API 호출
+        try {
+            await apiManager.fetchStockData('INVALID_TICKER');
+        } catch (error) {
+            expect(error).toBeInstanceOf(AppError);
+            expect(error.code).toBe('API_ERROR');
+        }
+    });
+    
+    test('네트워크 오류 시 캐시 데이터 사용', async () => {
+        const apiManager = new APIManager();
+        
+        // 캐시된 데이터 먼저 저장
+        await apiManager.cacheManager.set('AAPL', mockStockData);
+        
+        // 네트워크 오류 시뮬레이션
+        jest.spyOn(apiManager, 'fetchFromYahooFinance')
+            .mockRejectedValue(new Error('Network Error'));
+        
+        const result = await apiManager.fetchStockData('AAPL');
+        expect(result).toEqual(mockStockData);
+    });
+});
 ```
 
 ## 📱 PWA 기능
@@ -479,12 +716,8 @@ async function requestNotificationPermission() {
 
 ## ⚙️ 설정 가이드
 
-### API 키 설정 (선택사항)
-Yahoo Finance API는 무료로 사용할 수 있지만, 백업을 위해 Alpha Vantage API 키를 설정할 수 있습니다.
-
-1. [Alpha Vantage](https://www.alphavantage.co/support/#api-key)에서 무료 API 키 발급
-2. `js/scanner.js` 파일의 `apiKey` 변수 수정
-3. 하루 500회 요청 제한 (무료 플랜)
+### API 설정
+현재 Yahoo Finance API를 사용하여 주식 데이터를 제공합니다. 별도의 API 키 설정 없이 사용할 수 있습니다.
 
 ### 브라우저 호환성
 - **Chrome 80+**: 모든 기능 완벽 지원
@@ -499,6 +732,12 @@ Yahoo Finance API는 무료로 사용할 수 있지만, 백업을 위해 Alpha V
 # 저장소 포크 후 클론
 git clone https://github.com/YOUR_USERNAME/sp500-browser.git
 cd sp500-browser
+
+# 의존성 설치
+npm install
+
+# 테스트 실행
+npm test
 
 # 개발 서버 실행
 python -m http.server 8000
@@ -525,7 +764,6 @@ MIT License - 자유롭게 사용, 수정, 배포 가능합니다.
 ## 🔗 관련 링크
 
 - **GitHub Repository**: [https://github.com/munlucky/sp500-browser](https://github.com/munlucky/sp500-browser)
-- **Alpha Vantage API**: [https://www.alphavantage.co](https://www.alphavantage.co)
 - **Yahoo Finance**: [https://finance.yahoo.com](https://finance.yahoo.com)
 
 ## ⚠️ 면책 조항

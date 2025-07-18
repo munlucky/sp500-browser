@@ -1,6 +1,5 @@
 class BrowserStockScanner {
     constructor() {
-        this.apiKey = 'VVTMQ91XVOYZSYFR'; // Alpha Vantage 무료 키
         this.corsProxy = 'https://api.allorigins.win/raw?url=';
         this.isScanning = false;
         this.sp500Tickers = [];
@@ -337,27 +336,6 @@ class BrowserStockScanner {
                 if (apiData.currentPrice && apiData.yesterdayClose) {
                     // 이미 변환된 데이터 사용 (중복 호출 방지)
                     stockData = apiData;
-                } else if (apiData.timeSeries) {
-                    // Alpha Vantage API 응답 처리
-                    const dates = Object.keys(apiData.timeSeries).sort().reverse();
-                    if (dates.length < 2) return null;
-                    
-                    // 오늘이 2025-07-11 (금요일)이므로 가장 최근 거래일 찾기
-                    const latestDate = dates[0]; // 가장 최근 날짜
-                    const previousDate = dates[1]; // 그 전 거래일
-                    
-                    console.log(`📅 ${ticker} 데이터 날짜: 최근=${latestDate}, 이전=${previousDate}`);
-                    
-                    const today = apiData.timeSeries[latestDate];
-                    const yesterday = apiData.timeSeries[previousDate];
-                    
-                    stockData = {
-                        currentPrice: parseFloat(today['4. close']),
-                        yesterdayClose: parseFloat(yesterday['4. close']),
-                        yesterdayHigh: parseFloat(yesterday['2. high']),
-                        yesterdayLow: parseFloat(yesterday['3. low']),
-                        yesterdayVolume: parseInt(yesterday['5. volume'])
-                    };
                 } else {
                     console.warn(`❌ ${ticker}: 지원되지 않는 데이터 형식`);
                     return null;
