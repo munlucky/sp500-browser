@@ -324,7 +324,7 @@ class App {
         }
         
         return `
-            <div class="stock-card ${isBreakout ? 'breakout' : 'waiting'} cached-card">
+            <div class="stock-card ${isBreakout ? 'breakout' : 'waiting'} cached-card" onclick="window.open('https://finance.yahoo.com/quote/${stock.ticker}', '_blank')" style="cursor: pointer;">
                 <div class="stock-header">
                     <h3>${stock.ticker}</h3>
                     ${statusDisplay}
@@ -384,7 +384,7 @@ class App {
         const changeSign = change >= 0 ? '+' : '';
         
         return `
-            <div class="stock-card" data-ticker="${stock.ticker}">
+            <div class="stock-card" data-ticker="${stock.ticker}" onclick="window.open('https://finance.yahoo.com/quote/${stock.ticker}', '_blank')" style="cursor: pointer;">
                 <div class="stock-header">
                     <span class="stock-icon">${icon}</span>
                     <span class="stock-ticker">${stock.ticker}</span>
@@ -513,6 +513,24 @@ class App {
                         } else {
                             this.renderCachedResultsDirectly(cachedResults);
                         }
+                    }
+                }
+            });
+
+            // 종목 카드 클릭 이벤트 (이벤트 위임)
+            document.addEventListener('click', (event) => {
+                const stockCard = event.target.closest('.stock-card');
+                if (stockCard) {
+                    // 이미 onclick이 설정된 카드는 건너뛰기
+                    if (stockCard.onclick) return;
+                    
+                    const ticker = stockCard.dataset.ticker || 
+                                  stockCard.querySelector('.stock-ticker')?.textContent ||
+                                  stockCard.querySelector('.stock-header h3')?.textContent;
+                    
+                    if (ticker) {
+                        console.log(`📈 ${ticker} 차트 열기`);
+                        window.open(`https://finance.yahoo.com/quote/${ticker}`, '_blank');
                     }
                 }
             });
