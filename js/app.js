@@ -16,6 +16,9 @@ class App {
             // 필수 클래스들이 로드되었는지 확인
             this.checkRequiredClasses();
             
+            // 캐시된 결과 먼저 로드 (스캐너 초기화 전에)
+            this.loadCachedResults();
+            
             // 캐시 정리 (어제 날짜 데이터 삭제)
             StorageManager.initializeCacheCleanup();
             
@@ -51,7 +54,7 @@ class App {
             // 알림 관리자 초기화
             await NotificationManager.init();
             
-            // 캐시된 결과 로드
+            // 스캐너 초기화 후 캐시된 결과 다시 로드 (스캐너 메서드 사용)
             this.loadCachedResults();
             
             // 설정 UI 초기화
@@ -141,13 +144,15 @@ class App {
 
     loadCachedResults() {
         try {
+            // 일반 스캔 결과 캐시 로드
             const cachedResults = StorageManager.getResults();
-            if (cachedResults && this.scanner) {
-                console.log('📦 캐시된 결과 로드 중...');
+            if (cachedResults) {
+                console.log('📦 캐시된 스캔 결과 로드 중...');
                 
                 // 캐시된 결과의 유효성 확인
                 if (this.validateCachedResults(cachedResults)) {
-                    this.scanner.displayResults(cachedResults);
+                    // 스캐너가 아직 초기화되지 않은 경우, 직접 UI 렌더링
+                    this.renderCachedResultsDirectly(cachedResults);
                     
                     const timeDiff = Date.now() - new Date(cachedResults.timestamp).getTime();
                     const minutesAgo = Math.floor(timeDiff / (1000 * 60));
@@ -157,6 +162,27 @@ class App {
                     console.warn('⚠️ 캐시된 결과가 유효하지 않음');
                     StorageManager.clearCache();
                 }
+            }
+            
+            // 돌파 결과 캐시 로드
+            const cachedBreakoutResults = StorageManager.getBreakoutResults();
+            if (cachedBreakoutResults) {
+                console.log('📦 캐시된 돌파 결과 로드 중...');
+                
+                const timeDiff = Date.now() - new Date(cachedBreakoutResults.timestamp).getTime();
+                const minutesAgo = Math.floor(timeDiff / (1000 * 60));
+                
+                // 캐시가 최신(1시간 이내)인 경우에만 표시
+                if (timeDiff < 60 * 60 * 1000) { // 1시간
+                    this.renderCachedBreakoutResults(cachedBreakoutResults);
+                    console.log(`📦 돌파 결과 캐시 로드 완료: 돌파 ${cachedBreakoutResults.breakoutStocks?.length || 0}개, 대기 ${cachedBreakoutResults.waitingStocks?.length || 0}개 (${minutesAgo}분 전)`);
+                } else {
+                    console.log('⏰ 돌파 결과 캐시가 너무 오래됨 (1시간 초과)');
+                }
+            }
+            
+            if (!cachedResults && !cachedBreakoutResults) {
+                console.log('📦 캐시된 결과 없음');
             }
         } catch (error) {
             console.error('❌ 캐시 로드 실패:', error);
@@ -175,6 +201,220 @@ class App {
         const hoursAgo = timeDiff / (1000 * 60 * 60);
         
         return hoursAgo < 24;
+    }
+
+    renderCachedResultsDirectly(results) {
+        try {
+            console.log('🎨 직접 UI 렌더링 시작...');
+            
+            // 대시보드 카운터 업데이트
+            const breakoutCountEl = document.getElementById('breakoutCount');
+            const waitingCountEl = document.getElementById('waitingCount');
+            const totalScannedEl = document.getElementById('totalScanned');
+            
+            if (breakoutCountEl) breakoutCountEl.textContent = results.breakoutStocks?.length || 0;
+            if (waitingCountEl) waitingCountEl.textContent = results.waitingStocks?.length || 0;
+            if (totalScannedEl) totalScannedEl.textContent = results.totalScanned || 0;
+            
+            // 돌파 종목 렌더링
+            this.renderStockList('breakoutStocks', results.breakoutStocks || [], '🚀');
+            
+            // 대기 종목 렌더링
+            this.renderStockList('waitingStocks', results.waitingStocks || [], '⏰');
+            
+            console.log('✅ 직접 UI 렌더링 완료');
+            
+        } catch (error) {
+            console.error('❌ 직접 UI 렌더링 실패:', error);
+        }
+    }
+
+    renderCachedBreakoutResults(cachedBreakoutResults) {
+        try {
+            console.log('🎨 캐시된 돌파 결과 렌더링 시작...');
+            
+            const { breakoutStocks = [], waitingStocks = [] } = cachedBreakoutResults;
+            
+            // 대시보드 카운터 업데이트 (기존 값과 병합)
+            const breakoutCountEl = document.getElementById('breakoutCount');
+            const waitingCountEl = document.getElementById('waitingCount');
+            
+            if (breakoutCountEl) {
+                const currentCount = parseInt(breakoutCountEl.textContent) || 0;
+                breakoutCountEl.textContent = Math.max(currentCount, breakoutStocks.length);
+            }
+            
+            if (waitingCountEl) {
+                const currentCount = parseInt(waitingCountEl.textContent) || 0;
+                waitingCountEl.textContent = Math.max(currentCount, waitingStocks.length);
+            }
+            
+            // 돌파 종목이 있으면 렌더링 (기존 데이터 덮어쓰지 않고 추가)
+            if (breakoutStocks.length > 0) {
+                this.renderStockListCached('breakoutStocks', breakoutStocks, '🚀', true);
+            }
+            
+            // 대기 종목이 있으면 렌더링 (기존 데이터 덮어쓰지 않고 추가)
+            if (waitingStocks.length > 0) {
+                this.renderStockListCached('waitingStocks', waitingStocks, '⏰', false);
+            }
+            
+            console.log('✅ 캐시된 돌파 결과 렌더링 완료');
+            
+        } catch (error) {
+            console.error('❌ 캐시된 돌파 결과 렌더링 실패:', error);
+        }
+    }
+
+    renderStockListCached(containerId, stocks, icon, isBreakout) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        // 기존 컨텐츠가 있으면 유지하고 새 데이터 추가
+        const existingCards = container.querySelectorAll('.stock-card');
+        const existingTickers = Array.from(existingCards).map(card => {
+            const tickerEl = card.querySelector('.stock-header h3');
+            return tickerEl ? tickerEl.textContent : null;
+        }).filter(Boolean);
+        
+        // 중복되지 않는 새 종목들만 필터링
+        const newStocks = stocks.filter(stock => !existingTickers.includes(stock.ticker));
+        
+        if (newStocks.length === 0) {
+            console.log(`📦 ${icon} ${containerId}: 새로운 캐시 종목 없음 (중복 제거됨)`);
+            return;
+        }
+        
+        // 새 종목 카드들 생성
+        const newStockCards = newStocks.map(stock => 
+            this.createStockCardCached(stock, icon, isBreakout)
+        ).join('');
+        
+        // 기존 컨텐츠에 추가 (덮어쓰지 않음)
+        if (existingCards.length === 0) {
+            container.innerHTML = newStockCards;
+        } else {
+            container.innerHTML += newStockCards;
+        }
+        
+        console.log(`📦 ${icon} ${containerId}: ${newStocks.length}개 캐시 종목 추가됨`);
+    }
+
+    createStockCardCached(stock, icon, isBreakout) {
+        const price = stock.currentPrice || stock.price || 0;
+        const entryPrice = stock.entryPrice || 0;
+        const stopLoss = stock.stopLoss || 0;
+        const target1 = stock.target1 || 0;
+        const target2 = stock.target2 || 0;
+        const volatility = stock.volatility || 0;
+        const volume = stock.yesterdayVolume || stock.volume || 0;
+        const score = stock.score || 0;
+        
+        // 캐시 표시 배지
+        const cacheType = stock.cacheType || 'cached';
+        const cacheIcon = cacheType === 'breakout' ? '🚀' : cacheType === 'waiting' ? '⏰' : '📦';
+        
+        let statusDisplay = '';
+        if (isBreakout) {
+            const gain = price > 0 && entryPrice > 0 ? ((price - entryPrice) / entryPrice * 100).toFixed(1) : '0.0';
+            statusDisplay = `<div class="breakout-badge">돌파! +${gain}%</div>`;
+        } else {
+            const gap = entryPrice > price ? (entryPrice - price).toFixed(2) : '0.00';
+            statusDisplay = `<div class="gap">돌파까지: $${gap}</div>`;
+        }
+        
+        return `
+            <div class="stock-card ${isBreakout ? 'breakout' : 'waiting'} cached-card">
+                <div class="stock-header">
+                    <h3>${stock.ticker}</h3>
+                    ${statusDisplay}
+                    <div class="cache-badge" title="캐시된 데이터">${cacheIcon}</div>
+                </div>
+                <div class="price-info">
+                    <div class="current-price">$${price.toFixed(2)}</div>
+                    <div class="entry-price">진입: $${entryPrice.toFixed(2)}</div>
+                </div>
+                <div class="targets">
+                    <div class="target stop-loss">손절: $${stopLoss.toFixed(2)}</div>
+                    <div class="target profit">목표1: $${target1.toFixed(2)}</div>
+                    <div class="target profit">목표2: $${target2.toFixed(2)}</div>
+                </div>
+                <div class="stats">
+                    <span>변동률: ${volatility.toFixed(1)}%</span>
+                    <span>거래량: ${this.formatNumber(volume)}</span>
+                    <span>점수: ${score}/100</span>
+                </div>
+            </div>
+        `;
+    }
+
+    formatNumber(num) {
+        if (!num || isNaN(num)) {
+            return '0';
+        }
+        
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toString();
+    }
+
+    renderStockList(containerId, stocks, icon) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        if (!stocks || stocks.length === 0) {
+            container.innerHTML = `<div class="no-results">캐시된 ${icon} 종목이 없습니다.</div>`;
+            return;
+        }
+        
+        const stockCards = stocks.map(stock => this.createStockCard(stock, icon)).join('');
+        container.innerHTML = stockCards;
+    }
+
+    createStockCard(stock, icon) {
+        const price = stock.currentPrice || stock.price || 0;
+        const entryPrice = stock.entryPrice || 0;
+        const change = stock.change || 0;
+        const changePercent = stock.changePercent || 0;
+        
+        const changeClass = change >= 0 ? 'positive' : 'negative';
+        const changeSign = change >= 0 ? '+' : '';
+        
+        return `
+            <div class="stock-card" data-ticker="${stock.ticker}">
+                <div class="stock-header">
+                    <span class="stock-icon">${icon}</span>
+                    <span class="stock-ticker">${stock.ticker}</span>
+                    <span class="stock-name">${stock.name || ''}</span>
+                </div>
+                <div class="stock-price">
+                    <span class="current-price">$${price.toFixed(2)}</span>
+                    <span class="price-change ${changeClass}">
+                        ${changeSign}${change.toFixed(2)} (${changeSign}${changePercent.toFixed(2)}%)
+                    </span>
+                </div>
+                <div class="stock-details">
+                    <div class="detail-item">
+                        <span class="detail-label">진입가:</span>
+                        <span class="detail-value">$${entryPrice.toFixed(2)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">변동성:</span>
+                        <span class="detail-value">${(stock.volatility * 100).toFixed(1)}%</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">거래량:</span>
+                        <span class="detail-value">${(stock.volume / 1000000).toFixed(1)}M</span>
+                    </div>
+                </div>
+                <div class="stock-timestamp">
+                    캐시됨: ${new Date(stock.timestamp || Date.now()).toLocaleTimeString()}
+                </div>
+            </div>
+        `;
     }
 
     initializeSettings() {
@@ -263,8 +503,16 @@ class App {
                     
                     // 포그라운드 복귀 시 캐시된 결과 새로고침
                     const cachedResults = StorageManager.getResults();
-                    if (cachedResults && this.scanner) {
-                        this.scanner.displayResults(cachedResults);
+                    if (cachedResults) {
+                        if (this.scanner) {
+                            if (typeof this.scanner.displayResults === 'function') {
+                                this.scanner.displayResults(cachedResults);
+                            } else if (this.scanner.uiRenderer && typeof this.scanner.uiRenderer.renderResults === 'function') {
+                                this.scanner.uiRenderer.renderResults(cachedResults);
+                            }
+                        } else {
+                            this.renderCachedResultsDirectly(cachedResults);
+                        }
                     }
                 }
             });

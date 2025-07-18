@@ -271,6 +271,9 @@ class BrowserStockScanner {
             // 로컬 스토리지에 저장
             StorageManager.saveResults(results);
             
+            // 돌파/대기 종목 개별 캐시 저장 (1시간 TTL)
+            StorageManager.saveBreakoutResults(results.breakoutStocks, results.waitingStocks, 60);
+            
             // UI 업데이트
             this.displayResults(results);
             
@@ -309,6 +312,13 @@ class BrowserStockScanner {
                 // 미리 로드된 데이터가 있으면 사용 (중복 호출 방지)
                 apiData = preLoadedData;
             } else {
+                // 캐시된 돌파/대기 종목 데이터 먼저 확인
+                const cachedStockData = StorageManager.getCachedStockData(ticker);
+                if (cachedStockData && cachedStockData.cached) {
+                    console.log(`📦 ${ticker} 캐시된 스캔 결과 사용 (${cachedStockData.cacheType})`);
+                    return cachedStockData;
+                }
+                
                 // 데이터가 없으면 새로 가져오기
                 apiData = await this.fetchStockData(ticker);
             }
@@ -1013,6 +1023,10 @@ class BrowserStockScanner {
             // 결과 저장 및 표시
             this.lastScanResults = reCheckResults;
             StorageManager.saveResults(reCheckResults);
+            
+            // 재확인된 돌파/대기 종목 캐시 업데이트 (1시간 TTL)
+            StorageManager.saveBreakoutResults(reCheckResults.breakoutStocks, reCheckResults.waitingStocks, 60);
+            
             this.displayResults(reCheckResults);
 
             // 완료 메시지

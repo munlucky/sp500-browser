@@ -434,6 +434,69 @@ StorageManager.cacheWatchListCandidates = (candidates, ttlMinutes = 24 * 60) => 
     StorageManager.setItem('sp500_watchlist_candidates', candidates, ttlMinutes);
 };
 
+// 돌파 종목 캐시 메서드들
+StorageManager.saveBreakoutResults = (breakoutStocks, waitingStocks, ttlMinutes = 60) => {
+    const cacheData = {
+        breakoutStocks: breakoutStocks || [],
+        waitingStocks: waitingStocks || [],
+        timestamp: new Date().toISOString(),
+        totalCount: (breakoutStocks?.length || 0) + (waitingStocks?.length || 0)
+    };
+    
+    console.log(`💾 돌파 결과 캐시 저장: 돌파 ${breakoutStocks?.length || 0}개, 대기 ${waitingStocks?.length || 0}개`);
+    StorageManager.setItem('breakout_scan_results', cacheData, ttlMinutes);
+    
+    // 개별 종목별로도 캐시 저장 (중복 스캔 방지용)
+    if (breakoutStocks?.length > 0) {
+        breakoutStocks.forEach(stock => {
+            StorageManager.setItem(`breakout_stock_${stock.ticker}`, stock, ttlMinutes);
+        });
+    }
+    
+    if (waitingStocks?.length > 0) {
+        waitingStocks.forEach(stock => {
+            StorageManager.setItem(`waiting_stock_${stock.ticker}`, stock, ttlMinutes);
+        });
+    }
+};
+
+StorageManager.getBreakoutResults = () => {
+    return StorageManager.getItem('breakout_scan_results');
+};
+
+StorageManager.getCachedStockData = (ticker) => {
+    // 돌파 종목에서 먼저 찾기
+    const breakoutStock = StorageManager.getItem(`breakout_stock_${ticker}`);
+    if (breakoutStock) {
+        console.log(`📦 ${ticker} 돌파 종목 캐시 사용`);
+        return { ...breakoutStock, cached: true, cacheType: 'breakout' };
+    }
+    
+    // 대기 종목에서 찾기
+    const waitingStock = StorageManager.getItem(`waiting_stock_${ticker}`);
+    if (waitingStock) {
+        console.log(`📦 ${ticker} 대기 종목 캐시 사용`);
+        return { ...waitingStock, cached: true, cacheType: 'waiting' };
+    }
+    
+    // 일반 주식 데이터 캐시에서 찾기
+    return StorageManager.getItem(`stock_${ticker}`);
+};
+
+StorageManager.invalidateStockCache = (ticker) => {
+    // 특정 종목의 모든 캐시 제거
+    StorageManager.removeItem(`breakout_stock_${ticker}`);
+    StorageManager.removeItem(`waiting_stock_${ticker}`);
+    StorageManager.removeItem(`stock_${ticker}`);
+    console.log(`🗑️ ${ticker} 캐시 무효화됨`);
+};
+
+StorageManager.cleanupStockCaches = () => {
+    // 종목별 캐시들 정리
+    const pattern = /^(breakout_stock_|waiting_stock_|stock_)/;
+    return StorageManager.removeByPattern(pattern);
+};
+
 // 기존 코드 호환성을 위한 updateSettings 함수 추가
 StorageManager.updateSettings = (updates) => {
     const current = StorageManager.getSettings();

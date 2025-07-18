@@ -151,6 +151,20 @@ class BreakoutTracker {
           // 캐시에 저장 (24시간 유효)
           StorageManager.saveWatchListCandidates(topCandidates);
           
+          // 대기 종목들을 개별 캐시에도 저장 (1시간 TTL)
+          if (topCandidates.length > 0) {
+              topCandidates.forEach(candidate => {
+                  StorageManager.setItem(`waiting_stock_${candidate.ticker}`, {
+                      ...candidate,
+                      isBreakout: false,
+                      cached: true,
+                      cacheType: 'waiting',
+                      meetsConditions: true
+                  }, 60);
+              });
+              console.log(`💾 워치리스트 개별 캐시 저장: ${topCandidates.length}개 종목`);
+          }
+          
           this.updateStatus(`워치리스트 생성 완료: ${topCandidates.length}개 종목 (새로 스캔: ${scannedCount}개, 캐시 건너뜀: ${skippedCount}개)`, 'completed');
           
           
@@ -898,6 +912,22 @@ class BreakoutTracker {
 
   saveTodayBreakouts() {
       localStorage.setItem('today_breakouts', JSON.stringify(this.todayBreakouts));
+      
+      // 돌파된 종목들을 캐시에도 저장 (1시간 TTL)
+      if (this.todayBreakouts.length > 0) {
+          this.todayBreakouts.forEach(breakout => {
+              if (breakout.ticker) {
+                  StorageManager.setItem(`breakout_stock_${breakout.ticker}`, {
+                      ...breakout,
+                      isBreakout: true,
+                      cached: true,
+                      cacheType: 'breakout',
+                      breakoutConfirmed: true
+                  }, 60);
+              }
+          });
+      }
+      
       console.log('💾 오늘의 돌파 데이터 저장됨:', this.todayBreakouts.length, '개');
   }
 
