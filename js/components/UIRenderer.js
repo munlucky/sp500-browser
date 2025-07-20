@@ -110,6 +110,14 @@ class UIRenderer {
     renderResults(results) {
         console.log('🎨 UI 결과 렌더링 시작:', results);
         
+        // 돌파 종목 데이터 상세 로그
+        if (results.breakoutStocks && results.breakoutStocks.length > 0) {
+            console.log('🚀 돌파 종목 데이터:', results.breakoutStocks);
+            results.breakoutStocks.forEach((stock, index) => {
+                console.log(`  ${index + 1}. ${stock.ticker}: $${stock.currentPrice} (진입가: $${stock.entryPrice})`);
+            });
+        }
+        
         // 대시보드 업데이트
         this.updateDashboard(results);
         
@@ -121,6 +129,12 @@ class UIRenderer {
         const breakoutCount = results.breakoutStocks?.length || 0;
         const waitingCount = results.waitingStocks?.length || 0;
         console.log(`📊 렌더링 완료: 돌파 ${breakoutCount}개, 대기 ${waitingCount}개`);
+        
+        // DOM 업데이트 확인
+        const breakoutContainer = document.getElementById('breakoutStocks');
+        if (breakoutContainer) {
+            console.log(`🔍 돌파 컨테이너 상태: ${breakoutContainer.children.length}개 자식 요소`);
+        }
     }
     
     /**
@@ -168,13 +182,26 @@ class UIRenderer {
      */
     renderStockCards(containerId, stocks, type) {
         const container = this.elements[containerId];
-        if (!container) return;
+        if (!container) {
+            console.warn(`❌ 컨테이너를 찾을 수 없습니다: ${containerId}`);
+            // 동적으로 요소 찾기 시도
+            const fallbackContainer = document.getElementById(containerId);
+            if (fallbackContainer) {
+                console.log(`✅ 동적으로 ${containerId} 컨테이너 발견`);
+                this.elements[containerId] = fallbackContainer;
+                return this.renderStockCards(containerId, stocks, type);
+            }
+            return;
+        }
+        
+        console.log(`🎨 ${containerId} 렌더링 시작:`, stocks?.length || 0, '개 종목');
         
         container.innerHTML = '';
         
         // 안전한 배열 확인
         if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
             container.innerHTML = this.createNoResultsHTML(type);
+            console.log(`📭 ${containerId}: 결과 없음`);
             return;
         }
         
@@ -188,7 +215,10 @@ class UIRenderer {
         displayStocks.forEach((stock, index) => {
             const cardElement = this.createStockCard(stock, type, index);
             container.appendChild(cardElement);
+            console.log(`🎨 ${type} 카드 추가됨: ${stock.ticker} (${index + 1}/${displayStocks.length})`);
         });
+        
+        console.log(`✅ ${containerId} 렌더링 완료: ${displayStocks.length}개 카드 추가됨`);
         
         // 더 많은 결과가 있는 경우 표시
         if (stocks.length > maxDisplay) {

@@ -181,10 +181,10 @@ class AutoUpdater {
             const analysisResults = await this.stockAnalyzer.analyzeStocks(updatedStocks, settings);
             
             // 돌파 상태 재평가 (기존 대기 종목이 돌파했는지 확인)
-            this.checkBreakoutStatusChange(analysisResults);
+            const statusChanged = this.checkBreakoutStatusChange(analysisResults);
             
-            // 업데이트된 결과 가져오기
-            const updatedResults = window.browserStockScanner && window.browserStockScanner.lastScanResults ? 
+            // 업데이트된 결과 가져오기 (상태 변경이 있으면 최신 결과 사용)
+            const updatedResults = (statusChanged && window.browserStockScanner && window.browserStockScanner.lastScanResults) ? 
                 window.browserStockScanner.lastScanResults : analysisResults;
             
             // 캐시 업데이트 (돌파 상태 변경 사항 반영)
@@ -192,6 +192,26 @@ class AutoUpdater {
             
             // UI 업데이트 (캐시 저장 완료 후)
             this.uiRenderer.renderResults(updatedResults);
+            
+            // 상태 변경이 있었다면 추가 UI 업데이트 보장
+            if (statusChanged) {
+                console.log('🎨 돌파 상태 변경으로 인한 UI 강제 업데이트');
+                
+                // 레거시 스캐너의 renderStockCards 함수도 호출 (실제 DOM 업데이트 보장)
+                if (window.browserStockScanner && typeof window.browserStockScanner.renderStockCards === 'function') {
+                    const finalResults = window.browserStockScanner.lastScanResults;
+                    console.log('🔄 레거시 렌더링 시스템 호출:', finalResults);
+                    
+                    // 직접 DOM 업데이트 (레거시 방식)
+                    window.browserStockScanner.renderStockCards('breakoutStocks', finalResults.breakoutStocks, 'breakout');
+                    window.browserStockScanner.renderStockCards('waitingStocks', finalResults.waitingStocks, 'waiting');
+                }
+                
+                // 짧은 지연 후 다시 한 번 UI 업데이트 (새로운 시스템)
+                setTimeout(() => {
+                    this.uiRenderer.renderResults(updatedResults);
+                }, 100);
+            }
             
             this.lastUpdateTime = Date.now();
             const updateDuration = this.lastUpdateTime - updateStartTime;
@@ -385,15 +405,46 @@ class AutoUpdater {
     /**
      * 돌파 상태 변경 확인
      * @param {Object} analysisResults - 분석 결과
+     * @returns {boolean} - 상태 변경 여부
      */
     checkBreakoutStatusChange(analysisResults) {
         // 레거시 스캐너의 updateStockStatus 로직 호출
         if (window.browserStockScanner && typeof window.browserStockScanner.updateStockStatus === 'function') {
+            // 변경 전 상태 기록
+            const beforeBreakoutCount = window.browserStockScanner.lastScanResults?.breakoutStocks?.length || 0;
+            const beforeWaitingCount = window.browserStockScanner.lastScanResults?.waitingStocks?.length || 0;
+            
             // 최신 분석 결과로 lastScanResults 업데이트
             window.browserStockScanner.lastScanResults = analysisResults;
             window.browserStockScanner.updateStockStatus();
-            console.log('🔄 돌파 상태 재평가 완료');
+            
+            // 변경 후 상태 확인
+            const afterBreakoutCount = window.browserStockScanner.lastScanResults?.breakoutStocks?.length || 0;
+            const afterWaitingCount = window.browserStockScanner.lastScanResults?.waitingStocks?.length || 0;
+            
+            const statusChanged = (beforeBreakoutCount !== afterBreakoutCount) || (beforeWaitingCount !== afterWaitingCount);
+            
+            if (statusChanged) {
+                console.log('🔄 돌파 상태 변경 감지!', {
+                    breakout: `${beforeBreakoutCount} -> ${afterBreakoutCount}`,
+                    waiting: `${beforeWaitingCount} -> ${afterWaitingCount}`
+                });
+                
+                // 돌파 상태 변경 이벤트 발생
+                this.eventBus.emit('breakout-status-changed', {
+                    beforeBreakoutCount,
+                    afterBreakoutCount,
+                    beforeWaitingCount,
+                    afterWaitingCount
+                });
+            } else {
+                console.log('🔄 돌파 상태 재평가 완료 (변경 없음)');
+            }
+            
+            return statusChanged;
         }
+        
+        return false;
     }
 
     /**

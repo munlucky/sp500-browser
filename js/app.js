@@ -57,6 +57,11 @@ class App {
             // 스캐너 초기화 후 캐시된 결과 다시 로드 (스캐너 메서드 사용)
             this.loadCachedResults();
             
+            // 스캐너 초기화 완료 후 캐시된 결과를 스캐너에 설정
+            setTimeout(() => {
+                this.setCachedResultsToScanner();
+            }, 1000); // 1초 후 실행 (스캐너 완전 초기화 보장)
+            
             // 설정 UI 초기화
             this.initializeSettings();
             
@@ -110,6 +115,39 @@ class App {
         }
     }
 
+    // 캐시된 결과를 스캐너에 설정
+    setCachedResultsToScanner() {
+        try {
+            const cachedResults = StorageManager.getResults();
+            console.log('📦 캐시된 결과 확인:', {
+                hasCachedResults: !!cachedResults,
+                hasBrowserStockScanner: !!window.browserStockScanner,
+                cachedResults
+            });
+            
+            if (cachedResults && window.browserStockScanner) {
+                window.browserStockScanner.lastScanResults = cachedResults;
+                console.log('📦 스캐너에 캐시된 결과 설정 완료:', {
+                    breakoutStocks: cachedResults.breakoutStocks?.length || 0,
+                    waitingStocks: cachedResults.waitingStocks?.length || 0
+                });
+                
+                // 설정 후 검증
+                console.log('🔍 설정 후 검증:', {
+                    scannerLastScanResults: window.browserStockScanner.lastScanResults,
+                    isEqual: window.browserStockScanner.lastScanResults === cachedResults
+                });
+            } else {
+                console.warn('⚠️ 캐시된 결과 또는 스캐너가 없음:', {
+                    cachedResults: !!cachedResults,
+                    browserStockScanner: !!window.browserStockScanner
+                });
+            }
+        } catch (error) {
+            console.error('❌ 캐시된 결과 스캐너 설정 실패:', error);
+        }
+    }
+
     checkRequiredClasses() {
         const requiredClasses = {
             'Constants': () => typeof window.Constants !== 'undefined',
@@ -153,6 +191,12 @@ class App {
                 if (this.validateCachedResults(cachedResults)) {
                     // 스캐너가 아직 초기화되지 않은 경우, 직접 UI 렌더링
                     this.renderCachedResultsDirectly(cachedResults);
+                    
+                    // 스캐너에 캐시된 결과 설정 (자동 업데이트 가능하도록)
+                    if (window.browserStockScanner) {
+                        window.browserStockScanner.lastScanResults = cachedResults;
+                        console.log('📦 스캐너에 캐시된 결과 설정 완료');
+                    }
                     
                     const timeDiff = Date.now() - new Date(cachedResults.timestamp).getTime();
                     const minutesAgo = Math.floor(timeDiff / (1000 * 60));

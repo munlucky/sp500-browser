@@ -19,8 +19,41 @@ class BrowserStockScanner {
         this.loadSettings();
         this.bindEvents();
         
+        // 캐시된 결과 로드 (있는 경우)
+        this.loadCachedResults();
+        
         // 초기 UI 상태 설정
         this.updateAutoUpdateButtonUI();
+    }
+
+    // 캐시된 결과 로드
+    loadCachedResults() {
+        try {
+            const cachedResults = StorageManager.getResults();
+            if (cachedResults && this.validateCachedResults(cachedResults)) {
+                this.lastScanResults = cachedResults;
+                console.log('📦 스캐너에 캐시된 결과 로드됨:', {
+                    breakoutStocks: cachedResults.breakoutStocks?.length || 0,
+                    waitingStocks: cachedResults.waitingStocks?.length || 0,
+                    timestamp: cachedResults.timestamp
+                });
+            } else {
+                console.log('📭 캐시된 결과가 없거나 유효하지 않음');
+            }
+        } catch (error) {
+            console.error('❌ 캐시된 결과 로드 실패:', error);
+        }
+    }
+
+    // 캐시된 결과 유효성 검증
+    validateCachedResults(results) {
+        if (!results || !results.timestamp) return false;
+        
+        // 24시간 이내의 결과만 유효
+        const timeDiff = Date.now() - new Date(results.timestamp).getTime();
+        const hoursAgo = timeDiff / (1000 * 60 * 60);
+        
+        return hoursAgo < 24;
     }
 
     // 설정 로드
@@ -906,15 +939,29 @@ class BrowserStockScanner {
 
     // 자동 업데이트 토글
     toggleAutoUpdate() {
+        console.log('🔄 자동 업데이트 토글 시도:', {
+            autoUpdateEnabled: this.autoUpdateEnabled,
+            lastScanResults: this.lastScanResults,
+            breakoutCount: this.lastScanResults?.breakoutStocks?.length || 0,
+            waitingCount: this.lastScanResults?.waitingStocks?.length || 0
+        });
+
         if (this.autoUpdateEnabled) {
             this.stopAutoUpdate();
         } else {
             // 스캔 결과가 있을 때만 자동 업데이트 시작 가능
             if (this.lastScanResults && 
                 (this.lastScanResults.breakoutStocks.length > 0 || this.lastScanResults.waitingStocks.length > 0)) {
+                console.log('✅ 스캔 결과 확인됨, 자동 업데이트 시작');
                 this.startAutoUpdate();
             } else {
                 console.warn('⚠️ 스캔 결과가 없어 자동 업데이트를 시작할 수 없습니다. 먼저 스캔을 실행하세요.');
+                console.log('🔍 디버그 정보:', {
+                    hasLastScanResults: !!this.lastScanResults,
+                    lastScanResults: this.lastScanResults,
+                    breakoutStocks: this.lastScanResults?.breakoutStocks,
+                    waitingStocks: this.lastScanResults?.waitingStocks
+                });
                 this.updateStatus('스캔 결과가 없습니다. 먼저 스캔을 실행하세요.', 'error');
             }
         }
