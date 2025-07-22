@@ -1,6 +1,9 @@
-# S&P 500 Scanner 핵심 기능 테스트 문서
+# Tests 폴더 룰 (Jest)
 
-## 테스트 개요
+## 목적
+Jest 기반 자동화 테스트 파일을 관리하는 폴더입니다.
+
+## 기존 프로젝트 테스트 개요
 이 프로젝트는 래리 윌리엄스 변동성 돌파 전략을 구현한 S&P 500 스캐너의 핵심 비즈니스 로직을 검증하는 테스트 스위트입니다.
 
 ## 테스트 구조
@@ -164,3 +167,103 @@ npm test -- --verbose
 - **테스트 개수**: 200+ 개
 - **파일 수**: 8개
 - **커버리지 목표**: 80% 이상
+
+---
+
+# 새로운 테스트 작성 룰
+
+## 테스트 파일 구조
+```javascript
+// feature.test.js
+describe('FeatureName', () => {
+    let instance;
+
+    beforeEach(() => {
+        // 각 테스트 전 초기화
+        instance = new FeatureClass();
+    });
+
+    afterEach(() => {
+        // 각 테스트 후 정리
+        instance = null;
+        jest.clearAllMocks();
+    });
+
+    describe('methodName', () => {
+        it('should handle normal case', () => {
+            // Arrange
+            const input = 'test data';
+
+            // Act
+            const result = instance.methodName(input);
+
+            // Assert
+            expect(result).toBe('expected output');
+        });
+
+        it('should handle edge case', () => {
+            // 엣지 케이스 테스트
+        });
+
+        it('should throw error for invalid input', () => {
+            expect(() => {
+                instance.methodName(null);
+            }).toThrow('Invalid input');
+        });
+    });
+});
+```
+
+## 비동기 테스트 룰
+```javascript
+describe('AsyncService', () => {
+    it('should fetch data successfully', async () => {
+        // Mock API 응답
+        const mockData = { ticker: 'AAPL', price: 150 };
+        jest.spyOn(global, 'fetch').mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve(mockData)
+        });
+
+        const service = new APIManager();
+        const result = await service.fetchStockData('AAPL');
+
+        expect(result).toEqual(mockData);
+        expect(fetch).toHaveBeenCalledWith(expect.stringContaining('AAPL'));
+    });
+
+    it('should handle API error', async () => {
+        jest.spyOn(global, 'fetch').mockRejectedValue(new Error('Network error'));
+
+        const service = new APIManager();
+        
+        await expect(service.fetchStockData('INVALID')).rejects.toThrow('Network error');
+    });
+});
+```
+
+## Mock 사용 룰
+```javascript
+// 모듈 Mock
+jest.mock('../js/services/APIManager.js', () => {
+    return {
+        APIManager: jest.fn().mockImplementation(() => ({
+            fetchStockData: jest.fn().mockResolvedValue({ price: 100 })
+        }))
+    };
+});
+
+// 함수 Mock
+const mockEventBus = {
+    on: jest.fn(),
+    emit: jest.fn(),
+    off: jest.fn()
+};
+```
+
+## 금지사항
+- 실제 API 호출하는 테스트 작성 금지 (Mock 사용 필수)
+- 테스트 간 의존성 생성 금지 (각 테스트는 독립적이어야 함)
+- 하드코딩된 시간 의존적 테스트 작성 금지
+- 외부 환경에 의존적인 테스트 작성 금지
+- 부작용이 있는 테스트 작성 금지 (정리 과정 필수)
