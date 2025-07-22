@@ -1,15 +1,22 @@
 const CACHE_NAME = 'sp500-scanner-v1';
+const CACHE_NAME = 'sp500-scanner-v1';
+
+// 현재 서비스 워커 파일의 경로를 기반으로 기본 경로를 동적으로 결정
+// 예: /sp500-browser/sw.js -> /sp500-browser/
+// 예: /sw.js -> /
+const basePath = self.location.pathname.substring(0, self.location.pathname.lastIndexOf('/')) + '/';
+
 const urlsToCache = [
-    '/',
-    '/index.html',
-    '/css/style.css',
-    '/js/scanner.js',
-    '/js/calculator.js',
-    '/js/storage.js',
-    '/js/notifications.js',
-    '/manifest.json',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png'
+    basePath,
+    basePath + 'index.html',
+    basePath + 'css/style.css',
+    basePath + 'js/scanner.js',
+    basePath + 'js/calculator.js',
+    basePath + 'js/storage.js',
+    basePath + 'js/notifications.js',
+    basePath + 'manifest.json',
+    basePath + 'icons/icon-192.png',
+    basePath + 'icons/icon-512.png'
 ];
 
 // 설치 이벤트
